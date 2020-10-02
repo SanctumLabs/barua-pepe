@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: email-worker
+    namespace: communication
+    labels: &EmailLabels
+        app: emails
+        tier: backend
+        role: communication
+        component: emails        
+spec:
+    selector:
+        matchLabels: *EmailLabels
+    replicas: 1
+    template:
+        metadata:
+            labels: *EmailLabels
+        spec:
+            securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                runAsGroup: 3000
+                fsGroup: 2000
+
+            containers:
+                -   name: mail-worker
+                    image: garihublimited/email-gateway:latest
+                    imagePullPolicy: Always
+                    command: ["celery", "worker", "-A", "app.celery_worker.celery_app", "-E", "-l", "info",
+                              "-n mail-worker@%n",
+                              "--concurrency=5"
+                    ]
+                    env:
+                        -   name: FLASK_ENV
+                            value: "staging"
+                        -   name: PORT
+                            value: "4000"
+
+                        -   name: USERNAME
+                            valueFrom:
+                                secretKeyRef:
+                                    name: email-config
+                                    key: username
+
+                        -   name: PASSWORD
+                            valueFrom:
+                                secretKeyRef:
+                                    name: email-config
+                                    key: password
+
+                        -   name: HOST
+                            valueFrom:
+                                secretKeyRef:
+                                    name: email-config
+                                    key: host
+
+                        -   name: SMTPPORT
+                            valueFrom:
+                                secretKeyRef:
+                                    name: email-config
+                                    key: smtpport
+
+                        -   name: SENDEREMAILADDRESS
+                            valueFrom:
+                                secretKeyRef:
+                                    name: email-config
+                                    key: senderEmailAddress
+
+                        -   name: SENDEREMAILNAME
+                            valueFrom:
+                                secretKeyRef:
+                                    name: email-config
+                                    key: senderEmailName
+
+                        -   name: TOKEN
+                            valueFrom:
+                                secretKeyRef:
+                                    name: email-config
+                                    key: token
+
+                        -   name: SENDGRID_URL
+                            valueFrom:
+                                secretKeyRef:
+                                    name: email-config
+                                    key: apiUrl
+
+                        -   name: AMQP_USER
+                            valueFrom:
+                                secretKeyRef:
+                                    name: email-amqp-credentials
+                                    key: user
+
+                        -   name: AMQP_PASSWORD
+                            valueFrom:
+                                secretKeyRef:
+                                    name: email-amqp-credentials
+                                    key: password
+
+                        -   name: BROKER_URL
+                            value: 'amqp://$(AMQP_USER):$(AMQP_PASSWORD)@rabbitmq-discovery:5672//'
+
+                        -   name: RESULT_BACKEND
+                            value: 'redis://redis:6379'
+
+                        -   name: BROKER_HOST
+                            value: 'rabbitmq-discovery'
