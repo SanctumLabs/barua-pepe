@@ -3,7 +3,7 @@ from unittest.mock import patch
 from tests import BaseTestCase
 from app.exceptions import EmailGatewayError
 
-base_url = "/api/v1/email/send"
+base_url = "/api/v1/mail/"
 
 
 class TestMailApi(BaseTestCase):
