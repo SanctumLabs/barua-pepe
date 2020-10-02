@@ -49,7 +49,7 @@ class TestMailApi(BaseTestCase):
             response = self.client.post(
                 base_url,
                 json=dict(
-                    to=["johndoe@gmail.com"],
+                    to=["johndoe@example.com"],
                     subject="Rocket Schematics!",
                 )
             )
@@ -81,7 +81,7 @@ class TestMailApi(BaseTestCase):
             response = self.client.post(
                 base_url,
                 json=dict(
-                    to=["johndoe@gmail.com"],
+                    to=["johndoe@example.com"],
                     message="Let's build this!!"
                 )
             )
@@ -131,7 +131,7 @@ class TestMailApi(BaseTestCase):
             response = self.client.post(
                 base_url,
                 json=dict(
-                    to=["johndoe@gmail@gmail.com"],
+                    to=["johndoe@example.com"],
                     subject="Rocket Schematics",
                     message=""
                 )
@@ -150,8 +150,8 @@ class TestMailApi(BaseTestCase):
                     "from_": {
                         "email": "ninja",
                     },
-                    "to": ["johndoe@gmail@gmail.com"],
-                    "cc": ["janedoe@gmail.com"],
+                    "to": ["johndoe@example.com"],
+                    "cc": ["janedoe@example.com"],
                     "subject": "Rocket Schematics",
                     "message": "Let us build a rocket to the Moon"
                 }
@@ -167,7 +167,7 @@ class TestMailApi(BaseTestCase):
             response = self.client.post(
                 base_url,
                 json=dict(
-                    to=["johndoe@gmail@gmail.com"],
+                    to=["johndoe@example.com"],
                     cc=[],
                     subject="Rocket Schematics",
                     message="Let us build a rocket to the Moon"
@@ -181,7 +181,7 @@ class TestMailApi(BaseTestCase):
             response = self.client.post(
                 base_url,
                 json=dict(
-                    to=["johndoe@gmail@gmail.com"],
+                    to=["johndoe@example.com"],
                     cc=["janedoe@gmail"],
                     subject="Rocket Schematics",
                     message="Let us build a rocket to the Moon"
@@ -198,8 +198,8 @@ class TestMailApi(BaseTestCase):
             response = self.client.post(
                 base_url,
                 json=dict(
-                    to=["johndoe@gmail.com"],
-                    cc=["janedoe@gmail.com"],
+                    to=["johndoe@example.com"],
+                    cc=["janedoe@example.com"],
                     bcc=[],
                     subject="Rocket Schematics",
                     message="Let us build a rocket to the Moon"
@@ -213,8 +213,8 @@ class TestMailApi(BaseTestCase):
             response = self.client.post(
                 base_url,
                 json=dict(
-                    to=["johndoe@gmail@gmail.com"],
-                    cc=["janedoe@gmail.com"],
+                    to=["johndoe@example.com"],
+                    cc=["janedoe@example.com"],
                     bcc=["hiddenhooman@gmail"],
                     subject="Rocket Schematics",
                     message="Let us build a rocket to the Moon"
@@ -232,8 +232,8 @@ class TestMailApi(BaseTestCase):
                 base_url,
                 json=dict(
                     to=[],
-                    cc=["janedoe@gmail.com"],
-                    bcc=["hiddenhooman@gmail.com"],
+                    cc=["janedoe@example.com"],
+                    bcc=["hiddenhooman@example.com"],
                     subject="Rocket Schematics",
                     message="Let us build a rocket to the Moon"
                 )
@@ -250,9 +250,9 @@ class TestMailApi(BaseTestCase):
             response = self.client.post(
                 base_url,
                 json=dict(
-                    to=["johndoe@gmail.com"],
-                    cc=["janedoe@gmail.com"],
-                    bcc=["hiddenhooman@gmail.com"],
+                    to=["johndoe@example.com"],
+                    cc=["janedoe@example.com"],
+                    bcc=["hiddenhooman@example.com"],
                     subject="Rocket Schematics",
                     message="Let us build a rocket to the Moon",
                     attachments=[]
@@ -267,9 +267,9 @@ class TestMailApi(BaseTestCase):
             response = self.client.post(
                 base_url,
                 json=dict(
-                    to=["johndoe@gmail.com"],
-                    cc=["janedoe@gmail.com"],
-                    bcc=["hiddenhooman@gmail.com"],
+                    to=["johndoe@example.com"],
+                    cc=["janedoe@example.com"],
+                    bcc=["hiddenhooman@example.com"],
                     subject="Rocket Schematics",
                     message="Let us build a rocket to the Moon",
                     attachments=[
@@ -288,9 +288,9 @@ class TestMailApi(BaseTestCase):
             response = self.client.post(
                 base_url,
                 json=dict(
-                    to=["johndoe@gmail.com"],
-                    cc=["janedoe@gmail.com"],
-                    bcc=["hiddenhooman@gmail.com"],
+                    to=["johndoe@example.com"],
+                    cc=["janedoe@example.com"],
+                    bcc=["hiddenhooman@example.com"],
                     subject="Rocket Schematics",
                     message="Let us build a rocket to the Moon",
                     attachments=[
@@ -309,9 +309,9 @@ class TestMailApi(BaseTestCase):
             response = self.client.post(
                 base_url,
                 json=dict(
-                    to=["johndoe@gmail.com"],
-                    cc=["janedoe@gmail.com"],
-                    bcc=["hiddenhooman@gmail.com"],
+                    to=["johndoe@example.com"],
+                    cc=["janedoe@example.com"],
+                    bcc=["hiddenhooman@example.com"],
                     subject="Rocket Schematics",
                     message="Let us build a rocket to the Moon",
                     attachments=[
@@ -331,7 +331,7 @@ class TestMailApi(BaseTestCase):
             self.assert_status(response, status_code=422)
             self.assertIsNotNone(response_json.get("errors"))
 
-    @patch("app.tasks.mail_sending_task.mail_sending_task", return_value=dict(success=True))
+    @patch("app.tasks.mail_sending_task.mail_sending_task.apply_async", return_value=dict(success=True))
     def test_returns_200_with_valid_json_body(self, mock_sending_task):
         """Test email api returns 200 with an valid JSON body calling send plain email use case"""
         with self.client:
@@ -339,11 +339,11 @@ class TestMailApi(BaseTestCase):
                 base_url,
                 json={
                     "from_": {
-                        "email": "ninja@gmail.com"
+                        "email": "ninja@example.com"
                     },
-                    "to": ["johndoe@gmail.com"],
-                    "cc": ["janedoe@gmail.com"],
-                    "bcc": ["hiddenhooman@gmail.com"],
+                    "to": ["johndoe@example.com"],
+                    "cc": ["janedoe@example.com"],
+                    "bcc": ["hiddenhooman@example.com"],
                     "subject": "Rocket Schematics",
                     "message": "Let us build a rocket to the Moon",
                     "attachments": [
@@ -369,12 +369,12 @@ class TestMailApi(BaseTestCase):
                 base_url,
                 json={
                     "from_": {
-                        "email": "ninja@gmail.com",
+                        "email": "ninja@example.com",
                         "name": "Ninja"
                     },
-                    "to": ["johndoe@gmail.com"],
-                    "cc": ["janedoe@gmail.com"],
-                    "bcc": ["hiddenhooman@gmail.com"],
+                    "to": ["johndoe@example.com"],
+                    "cc": ["janedoe@example.com"],
+                    "bcc": ["hiddenhooman@example.com"],
                     "subject": "Rocket Schematics",
                     "message": "Let us build a rocket to the Moon",
                     "attachments": [

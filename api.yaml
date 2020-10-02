@@ -11,21 +11,21 @@ parameters:
     type: object
     required: false
     description: Sender of email
-    example: { email: ninja@gmail.com, name: "Ninja" }
+    example: { email: ninja@example.com, name: "Ninja" }
 
   - name: to
     in: body
     type: array
     required: true
     description: Recipients of email
-    example: [ johndoe@gmail.com, janedoe@gmail.com ]
+    example: [ johndoe@example.com, janedoe@example.com ]
 
   - name: cc
     in: body
     type: array
     required: false
     description: Carbon copy recipients
-    example: [ johndoe@gmail.com, janedoe@gmail.com ]
+    example: [ johndoe@example.com, janedoe@example.com ]
 
   - name: subject
     in: body
@@ -39,7 +39,7 @@ parameters:
     type: array
     required: false
     description: Blind carbon copy recipients
-    example: [ johndoe@gmail.com, janedoe@gmail.com ]
+    example: [ johndoe@example.com, janedoe@example.com ]
 
   - name: message
     in: body

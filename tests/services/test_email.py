@@ -93,7 +93,7 @@ class EmailTestCases(BaseTestCase):
             # mock sending out the email, should throw an error
             try:
                 self.mock_mail.send(mock_message)
-            except Exception as e:
+            except Exception:
                 # test that default method is used
                 recipients_to = [{"email": email} for email in self.to]
 

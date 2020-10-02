@@ -7,7 +7,7 @@ import pika
 import os
 import json
 
-rabbit_host = os.environ.get("BROKER_HOST")
+broker_host = os.environ.get("BROKER_HOST")
 
 
 @celery_app.task(bind=True, default_retry_delay=30, max_retries=3, name="mail_sending_task")
@@ -38,7 +38,7 @@ def mail_sending_task(self, from_, to, cc, subject, bcc, message, attachments):
 
 
 def push_to_error_queue(from_, to, cc, subject, bcc, message, attachments):
-    if rabbit_host:
+    if broker_host:
         body = dict(
             from_=from_,
             to=to,
@@ -55,7 +55,7 @@ def push_to_error_queue(from_, to, cc, subject, bcc, message, attachments):
         # to decode
         # json.loads(res_bytes.decode('utf-8'))
 
-        connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbit_host))
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host=broker_host))
         channel = connection.channel()
         channel.basic_publish(exchange=EMAIL_ERROR_EXCHANGE, routing_key=EMAIL_ERROR_ROUTING_KEY,
                               body=body_bytes)
