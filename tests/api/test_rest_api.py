@@ -2,9 +2,11 @@ import unittest
 from unittest.mock import patch
 from tests import BaseTestCase
 from app.exceptions import EmailGatewayError
+import os
 
 base_url = "/api/v1/mail/"
 
+os.environ.update(BROKER_URL="memory://", RESULT_BACKEND="rpc")
 
 class TestMailApi(BaseTestCase):
     """
@@ -329,8 +331,8 @@ class TestMailApi(BaseTestCase):
             self.assert_status(response, status_code=422)
             self.assertIsNotNone(response_json.get("errors"))
 
-    @patch("app.core.send_plain_email_usecase.SendPlainEmailUseCase.execute", return_value=dict(success=True))
-    def test_returns_200_with_valid_json_body(self, mock_usecase):
+    @patch("app.tasks.mail_sending_task.mail_sending_task", return_value=dict(success=True))
+    def test_returns_200_with_valid_json_body(self, mock_sending_task):
         """Test email api returns 200 with an valid JSON body calling send plain email use case"""
         with self.client:
             response = self.client.post(
@@ -358,8 +360,8 @@ class TestMailApi(BaseTestCase):
             self.assert_status(response=response, status_code=200)
             self.assertEqual("Email sent out successfully", response_json.get("message"))
 
-    @patch("app.core.send_plain_email_usecase.SendPlainEmailUseCase.execute", side_effect=EmailGatewayError("Boom!"))
-    def test_returns_500_with_valid_json_body_but_use_case_fails(self, mock_usecase):
+    @patch("app.tasks.mail_sending_task.mail_sending_task.apply_async", side_effect=EmailGatewayError("Boom!"))
+    def test_returns_500_with_valid_json_body_but_task_fails(self, mock_sending_task):
         """Test email api returns 500 with an valid JSON body calling send plain email use case but exception is
         thrown """
         with self.client:
