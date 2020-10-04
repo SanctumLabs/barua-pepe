@@ -55,14 +55,14 @@ def send_plain_mail(to: list, subject: str, message: str, from_: dict = None, bc
         return dict(success=True, message="Message successfully sent")
     except Exception as e:
         # this should only happen if there is a fallback and we fail to send emails with the default setting
-        # if in that event, then the application should try sending an email using Sendgrid
+        # if in that event, then the application should try sending an email using a MAIL API
 
         logger.error(f"Failed to send email with error {e}")
         logger.warning(f"Using alternative to send email")
 
         # get the token and base url
-        token = current_app.config.get("SENDGRID_TOKEN")
-        base_url = current_app.config.get("SENDGRID_URL")
+        token = current_app.config.get("MAIL_TOKEN")
+        base_url = current_app.config.get("MAIL_API_URL")
 
         recipients_to = [{"email": email} for email in to]
 

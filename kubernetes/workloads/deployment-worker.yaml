@@ -72,35 +72,36 @@ spec:
                                     name: email-config
                                     key: senderEmailName
 
-                        -   name: TOKEN
+                        -   name: MAIL_TOKEN
                             valueFrom:
                                 secretKeyRef:
                                     name: email-config
                                     key: token
 
-                        -   name: SENDGRID_URL
+                        -   name: MAIL_API_URL
                             valueFrom:
                                 secretKeyRef:
                                     name: email-config
                                     key: apiUrl
 
-                        -   name: AMQP_USER
+                        -   name: BROKER_USER
                             valueFrom:
                                 secretKeyRef:
                                     name: email-amqp-credentials
                                     key: user
 
-                        -   name: AMQP_PASSWORD
+                        -   name: BROKER_PASSWORD
                             valueFrom:
                                 secretKeyRef:
                                     name: email-amqp-credentials
                                     key: password
 
+                        -   name: BROKER_HOST
+                            value: 'rabbitmq-discovery'
+
                         -   name: BROKER_URL
-                            value: 'amqp://$(AMQP_USER):$(AMQP_PASSWORD)@rabbitmq-discovery:5672//'
+                            value: 'amqp://$(BROKER_USER):$(BROKER_PASSWORD)@$(BROKER_HOST):5672//'
 
                         -   name: RESULT_BACKEND
                             value: 'redis://redis:6379'
 
-                        -   name: BROKER_HOST
-                            value: 'rabbitmq-discovery'

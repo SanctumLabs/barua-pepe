@@ -1,14 +1,16 @@
 from app import celery_app
 from app.logger import log
 from app.services.email import send_plain_mail
-from app.constants import EMAIL_ERROR_EXCHANGE, EMAIL_ERROR_ROUTING_KEY
+from app.constants import EMAIL_ERROR_EXCHANGE, EMAIL_ERROR_ROUTING_KEY, EMAIL_ERROR_QUEUE_NAME
 from .exceptions import TaskException
 import pika
 import os
 import json
 
 broker_host = os.environ.get("BROKER_HOST")
-
+broker_port = os.environ.get("BROKER_PORT")
+broker_username = os.environ.get("BROKER_USER")
+broker_password = os.environ.get("BROKER_PASSWORD")
 
 @celery_app.task(bind=True, default_retry_delay=30, max_retries=3, name="mail_sending_task")
 @log.catch
@@ -55,8 +57,21 @@ def push_to_error_queue(from_, to, cc, subject, bcc, message, attachments):
         # to decode
         # json.loads(res_bytes.decode('utf-8'))
 
-        connection = pika.BlockingConnection(pika.ConnectionParameters(host=broker_host))
+        credentials = pika.PlainCredentials(username=broker_username, password=broker_password)
+
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host=broker_host, port=broker_port, credentials=credentials))
         channel = connection.channel()
-        channel.basic_publish(exchange=EMAIL_ERROR_EXCHANGE, routing_key=EMAIL_ERROR_ROUTING_KEY,
-                              body=body_bytes)
+        channel.confirm_delivery()
+
+        # channel.queue_declare(queue=EMAIL_ERROR_QUEUE_NAME, passive=True)
+
+        # channel.queue_bind(queue=EMAIL_ERROR_QUEUE_NAME, exchange=EMAIL_ERROR_EXCHANGE, routing_key=EMAIL_ERROR_ROUTING_KEY)
+
+        channel.basic_publish(
+            exchange=EMAIL_ERROR_EXCHANGE, 
+            routing_key=EMAIL_ERROR_ROUTING_KEY,
+            body=body_bytes,
+            properties=pika.BasicProperties(delivery_mode=2)
+        )
+
         connection.close()
