@@ -90,8 +90,8 @@ class TestingConfig(Config):
     PRESERVE_CONTEXT_ON_EXCEPTION = False
     MAIL_DEBUG = True
     MAIL_DEFAULT_SENDER = "test@example.com"
-    MAIL_TOKEN = "sendgrid-token"
-    MAIL_API_URL = "https://api.sendgrid.test.com"
+    MAIL_TOKEN = "mail-token"
+    MAIL_API_URL = "https://api.mail.test.com"
 
 
 class ProductionConfig(Config):

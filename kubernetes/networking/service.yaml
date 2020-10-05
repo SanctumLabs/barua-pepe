@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: email-svc
-  namespace: communication
+  namespace: comms
   labels: &EmailLabels
     app: emails
     tier: backend
