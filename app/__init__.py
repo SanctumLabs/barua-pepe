@@ -14,6 +14,7 @@ mail = Mail()
 
 broker = os.environ.get("BROKER_URL", "amqp://")
 result_backend = os.environ.get("RESULT_BACKEND", "rpc://")
+result_backend_master = os.environ.get("RESULT_BACKEND_LEADER", "redismaster")
 
 celery_app = Celery("EmailGateway", broker=broker, backend=result_backend, include=["app.tasks"])
 
@@ -80,11 +81,14 @@ def create_app(config_name):
     task_routes = {
         "mail_sending_task": dict(
             queue=EMAIL_QUEUE_NAME
+        ),
+        "mail_error_task": dict(
+            queue=EMAIL_ERROR_QUEUE_NAME
         )
     }
 
     result_backend_transport_options = {
-        'master_name': 'redismaster',
+        'master_name': result_backend_master,
         'retry_policy': {
             'timeout': 5.0
         }
