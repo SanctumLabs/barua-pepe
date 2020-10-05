@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
     name: email-api
-    namespace: communication
+    namespace: comms
     labels: &EmailLabels
         app: emails
         tier: backend

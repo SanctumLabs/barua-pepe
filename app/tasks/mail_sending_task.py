@@ -65,7 +65,7 @@ def push_to_error_queue(from_, to, cc, subject, bcc, message, attachments):
 
         # channel.queue_declare(queue=EMAIL_ERROR_QUEUE_NAME, passive=True)
 
-        # channel.queue_bind(queue=EMAIL_ERROR_QUEUE_NAME, exchange=EMAIL_ERROR_EXCHANGE, routing_key=EMAIL_ERROR_ROUTING_KEY)
+        channel.queue_bind(queue=EMAIL_ERROR_QUEUE_NAME, exchange=EMAIL_ERROR_EXCHANGE, routing_key=EMAIL_ERROR_ROUTING_KEY)
 
         channel.basic_publish(
             exchange=EMAIL_ERROR_EXCHANGE, 
