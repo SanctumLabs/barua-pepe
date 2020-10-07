@@ -10,7 +10,7 @@ metadata:
     component: emails
 spec:
   ports:
-  - port: 4000
+  - port: 6000
     name: http
-    targetPort: 4000
+    targetPort: http
   selector: *EmailLabels

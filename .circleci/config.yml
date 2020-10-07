@@ -6,15 +6,11 @@ executors:
     docker-executor:
         docker:
             - image: docker:17.05.0-ce-git
-        working_directory: ~/email-service
+        working_directory: ~/email-gateway
     node-executor:
         docker:
             - image: circleci/node:10
-        working_directory: ~/email-service
-    gcloud-executor:
-        docker:
-            -   image: google/cloud-sdk
-        working_directory: ~/email-service
+        working_directory: ~/email-gateway
 
 jobs:
     dependencies:
@@ -130,7 +126,7 @@ jobs:
                     docker push garihublimited/email-gateway:latest
                     docker push garihublimited/email-gateway:latest-v$CIRCLE_BUILD_NUM
 
-    push_preproduction:
+    push_beta:
         executor: docker-executor
         steps:
             - setup_remote_docker
@@ -145,16 +141,16 @@ jobs:
             - run:
                 name: Tag production docker image
                 command: |
-                    docker tag garihublimited/email-gateway:$CIRCLE_SHA1 garihublimited/email-gateway:preproduction
-                    docker tag garihublimited/email-gateway:$CIRCLE_SHA1 garihublimited/email-gateway:preproduction-v$CIRCLE_BUILD_NUM
+                    docker tag garihublimited/email-gateway:$CIRCLE_SHA1 garihublimited/email-gateway:beta
+                    docker tag garihublimited/email-gateway:$CIRCLE_SHA1 garihublimited/email-gateway:beta-v$CIRCLE_BUILD_NUM
 
             - run:
                 name: Push application Docker image
                 command: |
                     docker login -u $DOCKER_USER -p $DOCKER_PASS
                     docker push garihublimited/email-gateway:$CIRCLE_SHA1
-                    docker push garihublimited/email-gateway:preproduction
-                    docker push garihublimited/email-gateway:preproduction-v$CIRCLE_BUILD_NUM
+                    docker push garihublimited/email-gateway:beta
+                    docker push garihublimited/email-gateway:beta-v$CIRCLE_BUILD_NUM
 
     push_production:
         executor: docker-executor
@@ -202,18 +198,6 @@ jobs:
                 name: Publish release
                 command: npx semantic-release
 
-    # rollout_release:
-    #     executor: gcloud-executor
-    #     steps:
-    #         - run:
-    #             name: Rollout Production release
-    #             command: |
-    #                 echo $GKE_WEBSITE_SERVICE_KEY >> /tmp/${GKE_WEBSITE_CLUSTER_NAME}.json
-    #                 gcloud auth activate-service-account --key-file=/tmp/${GKE_WEBSITE_CLUSTER_NAME}.json
-    #                 gcloud container clusters get-credentials ${GKE_WEBSITE_CLUSTER_NAME} --region ${GKE_WEBSITE_COMPUTE_ZONE} --project ${GKE_WEBSITE_PROJECT_ID}
-    #                 kubectl set image deployment email-api email-api=garihublimited/email-gateway:production-v$CIRCLE_PREVIOUS_BUILD_NUM -n website-prod
-    #                 kubectl set image deployment email-worker email-worker=garihublimited/email-gateway:production-v$CIRCLE_PREVIOUS_BUILD_NUM -n website-prod
-
 workflows:
   version: 2
   test_build_push_tag:
@@ -228,7 +212,7 @@ workflows:
         filters:
           branches:
             only:
-            - master
+            - beta
             - develop
         requires:
         - test
@@ -242,12 +226,12 @@ workflows:
         requires:
         - build_docker_image
 
-    - push_preproduction:
+    - push_beta:
         context: garihub-context
         filters:
           branches:
             only:
-            - master
+            - beta
         requires:
         - build_docker_image
 
@@ -260,23 +244,14 @@ workflows:
         requires:
         - build_docker_image
 
-    # - rollout_release:
-    #       context: garihub-context
-    #       filters:
-    #           branches:
-    #               only:
-    #                   - production
-    #       requires:
-    #           - push_production
-
     - publish_prerelease:
           context: garihub-context
           filters:
               branches:
                   only:
-                      - master
+                      - beta
           requires:
-              - push_preproduction
+              - push_beta
 
     - publish_release:
           context: garihub-context
@@ -284,5 +259,3 @@ workflows:
               branches:
                   only:
                       - production
-        #   requires:
-        #       - rollout_release

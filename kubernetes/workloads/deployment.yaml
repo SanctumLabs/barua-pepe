@@ -22,6 +22,9 @@ spec:
                 runAsGroup: 3000
                 fsGroup: 2000
 
+            imagePullSecrets:
+                - name: docker-hub-registry
+
             containers:
                 -   name: email-gateway
                     image: garihublimited/email-gateway:latest
@@ -29,14 +32,18 @@ spec:
                     readinessProbe:
                         httpGet:
                             path: /health
-                            port: 4000
+                            port: 6000
+
                     ports:
-                        -   containerPort: 4000
+                        - name: http
+                          containerPort: 6000
+
                     env:
                         -   name: FLASK_ENV
                             value: "staging"
+
                         -   name: PORT
-                            value: "4000"
+                            value: "6000"
 
                         -   name: USERNAME
                             valueFrom:
@@ -90,20 +97,32 @@ spec:
                         -   name: BROKER_USER
                             valueFrom:
                                 secretKeyRef:
-                                    name: email-amqp-credentials
+                                    name: email-broker-creds
                                     key: user
 
                         -   name: BROKER_PASSWORD
                             valueFrom:
                                 secretKeyRef:
-                                    name: email-amqp-credentials
+                                    name: email-broker-creds
                                     key: password
 
                         -   name: BROKER_HOST
-                            value: 'rabbitmq-discovery'
+                            value: 'rabbitmq-svc-headless.broker.svc.cluster.local'
+
+                        -  name: BROKER_PORT
+                           value: '5672'
 
                         -   name: BROKER_URL
-                            value: 'amqp://$(BROKER_USER):$(BROKER_PASSWORD)@$(BROKER_HOST):5672//'
+                            value: 'amqp://$(BROKER_USER):$(BROKER_PASSWORD)@$(BROKER_HOST):$(BROKER_PORT)//'
+
+                        -   name: RESULT_BACKEND_HOST
+                            value: 'redis-svc-headless.cache.svc.cluster.local'
+
+                        -   name: RESULT_BACKEND_HOST
+                            value: '6379'
 
                         -   name: RESULT_BACKEND
-                            value: 'redis://redis:6379'
+                            value: 'redis://$(RESULT_BACKEND_HOST):6379'
+
+                        -   name: RESULT_BACKEND_LEADER
+                            value: 'redismaster'
