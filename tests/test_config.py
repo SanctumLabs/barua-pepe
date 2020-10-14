@@ -37,9 +37,9 @@ class TestConfigurationsCases(BaseTestCase):
         """Test the application has set the MAIL_DEFAULT_SENDER to test@example.com"""
         self.assertEqual(current_app.config.get("MAIL_DEFAULT_SENDER"), "test@example.com")
 
-    def test_app_has_set_mail_token_and_url_to_test_values(self):
-        """Test the application has set the MAIL_TOKEN and MAIL_API_URL to test values"""
-        token = current_app.config.get("MAIL_TOKEN")
+    def test_app_has_set_mail_api_token_and_url_to_test_values(self):
+        """Test the application has set the MAIL_API_TOKEN and MAIL_API_URL to test values"""
+        token = current_app.config.get("MAIL_API_TOKEN")
         base_url = current_app.config.get("MAIL_API_URL")
         self.assertEqual(token, "mail-token")
         self.assertEqual(base_url, "https://api.mail.test.com")

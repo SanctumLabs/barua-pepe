@@ -53,7 +53,7 @@ class Config(object):
 
     MAIL_DEFAULT_SENDER = os.environ.get("SENDEREMAILADDRESS", None)
 
-    MAIL_TOKEN = os.environ.get("TOKEN", "")
+    MAIL_API_TOKEN = os.environ.get("MAIL_API_TOKEN", "")
     MAIL_API_URL = os.environ.get("MAIL_API_URL", "")
     RESULT_BACKEND = os.environ.get("RESULT_BACKEND", "rpc://")
 
@@ -90,7 +90,7 @@ class TestingConfig(Config):
     PRESERVE_CONTEXT_ON_EXCEPTION = False
     MAIL_DEBUG = True
     MAIL_DEFAULT_SENDER = "test@example.com"
-    MAIL_TOKEN = "mail-token"
+    MAIL_API_TOKEN = "mail-token"
     MAIL_API_URL = "https://api.mail.test.com"
 
 

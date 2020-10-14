@@ -9,3 +9,10 @@ services:
         - CELERY_BROKER_URL=amqp://
     ports:
         - 5555:5555
+
+  redis:
+    image: redis:6.0.8-alpine
+    container_name: email-redis
+    hostname: redis
+    ports:
+        - 6379:6379

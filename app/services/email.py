@@ -28,7 +28,6 @@ def send_plain_mail(to: list, subject: str, message: str, from_: dict = None, bc
     :param list to: List of recipients of this email
     :param str subject: The subject of the email
     """
-
     try:
         logger.info(f"Sending email to {to}")
 
@@ -61,7 +60,7 @@ def send_plain_mail(to: list, subject: str, message: str, from_: dict = None, bc
         logger.warning(f"Using alternative to send email")
 
         # get the token and base url
-        token = current_app.config.get("MAIL_TOKEN")
+        token = current_app.config.get("MAIL_API_TOKEN")
         base_url = current_app.config.get("MAIL_API_URL")
 
         recipients_to = [{"email": email} for email in to]
@@ -79,8 +78,10 @@ def send_plain_mail(to: list, subject: str, message: str, from_: dict = None, bc
 
             recipients.update(dict(bcc=recipients_bcc))
 
-        sender = {"email": from_.get("email") if from_ else current_app.config.get("MAIL_DEFAULT_SENDER"),
-                  "name": from_.get("name") if from_ else current_app.config.get("MAIL_DEFAULT_SENDER")}
+        sender = {
+            "email": from_.get("email") if from_ else current_app.config.get("MAIL_DEFAULT_SENDER"),
+            "name": from_.get("name") if from_ else current_app.config.get("MAIL_DEFAULT_SENDER")
+        }
 
         request_body = {
             "personalizations": [

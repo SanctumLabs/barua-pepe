@@ -23,7 +23,7 @@ spec:
                 fsGroup: 2000
 
             imagePullSecrets:
-                - name: docker-hub-registry
+                -   name: docker-hub-registry
 
             containers:
                 -   name: email-gateway
@@ -35,12 +35,15 @@ spec:
                             port: 6000
 
                     ports:
-                        - name: http
-                          containerPort: 6000
+                        -   name: http
+                            containerPort: 6000
 
                     env:
                         -   name: FLASK_ENV
                             value: "staging"
+
+                        -   name: BETTER_EXCEPTIONS
+                            value: '0'
 
                         -   name: PORT
                             value: "6000"
@@ -81,8 +84,7 @@ spec:
                                     name: email-config
                                     key: senderEmailName
 
-
-                        -   name: MAIL_TOKEN
+                        -   name: MAIL_API_TOKEN
                             valueFrom:
                                 secretKeyRef:
                                     name: email-config
@@ -109,8 +111,8 @@ spec:
                         -   name: BROKER_HOST
                             value: 'rabbitmq-svc-headless.broker.svc.cluster.local'
 
-                        -  name: BROKER_PORT
-                           value: '5672'
+                        -   name: BROKER_PORT
+                            value: '5672'
 
                         -   name: BROKER_URL
                             value: 'amqp://$(BROKER_USER):$(BROKER_PASSWORD)@$(BROKER_HOST):$(BROKER_PORT)//'
@@ -118,7 +120,7 @@ spec:
                         -   name: RESULT_BACKEND_HOST
                             value: 'redis-svc-headless.cache.svc.cluster.local'
 
-                        -   name: RESULT_BACKEND_HOST
+                        -   name: RESULT_BACKEND_PORT
                             value: '6379'
 
                         -   name: RESULT_BACKEND
