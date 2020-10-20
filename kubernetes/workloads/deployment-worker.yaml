@@ -4,8 +4,6 @@ metadata:
     name: email-worker
     namespace: comms
     labels: &EmailLabels
-        app: emails
-        tier: backend
         role: worker
         component: emails
 spec:
@@ -26,7 +24,7 @@ spec:
                 -   name: docker-hub-registry
 
             # initContainers:
-            #     # TODO: set init container to check registry
+            #     # TODO: set init container to check broker
             #     - name: check-broker
             #       image: busybox:1.32.0
             #       imagePullPolicy: Always

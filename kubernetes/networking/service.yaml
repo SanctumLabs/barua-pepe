@@ -9,8 +9,8 @@ metadata:
     role: communication
     component: emails
 spec:
+  selector: *EmailLabels
   ports:
   - port: 6000
     name: http
     targetPort: http
-  selector: *EmailLabels
