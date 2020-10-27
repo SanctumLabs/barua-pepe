@@ -141,7 +141,7 @@ jobs:
                 name: Tag Beta docker image
                 command: |
                     docker tag garihublimited/email-gateway:$(echo $CIRCLE_SHA1 | cut -c0-7) garihublimited/email-gateway:alpha
-                    docker tag garihublimited/email-gateway:$(echo $CIRCLE_SHA1 | cut -c0-7) garihublimited/email-gateway:alpha$(echo $CIRCLE_SHA1 | cut -c0-7)
+                    docker tag garihublimited/email-gateway:$(echo $CIRCLE_SHA1 | cut -c0-7) garihublimited/email-gateway:alpha-$(echo $CIRCLE_SHA1 | cut -c0-7)
 
             - run:
                 name: Push application Docker image
@@ -304,6 +304,11 @@ workflows:
 
     - publish_release:
           context: garihub-context
+          requires:
+              - push_production
+              - push_rc
+              - push_beta
+              - push_alpha
           filters:
               branches:
                   only:

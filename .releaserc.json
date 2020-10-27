@@ -1,6 +1,6 @@
 {
     "branches": ["production", {"name": "rc", "prerelease": true}, {"name": "beta", "prerelease": true}, {"name": "alpha", "prerelease": true}],
-    "repositoryUrl": "https://github.com/GariHubLtd/email-gateway.git",
+    "repositoryUrl": "https://github.com/gariHubltd/email-gateway.git",
     "tagFormat": "v${version}",
     "plugins": [
       "@semantic-release/commit-analyzer",
