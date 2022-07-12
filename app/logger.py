@@ -5,10 +5,17 @@ Reference: https://github.com/Delgan/loguru
 
 import os
 import sys
-
+import logging
 from loguru import logger as log
+import uvicorn.logging
 
-# configurations for log handling
+logging.root.setLevel(logging.INFO)
+console_formatter = uvicorn.logging.ColourizedFormatter(
+    "{levelprefix:<8} {name}: {message}", style="{", use_colors=True
+)
+root = logging.getLogger()
+for handler in root.handlers:
+    handler.setFormatter(console_formatter)
 
 # info log configurations
 log.add(
