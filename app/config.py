@@ -35,6 +35,7 @@ class Config(BaseSettings):
     mail_api_url: str = os.environ.get("MAIL_API_URL", "")
     result_backend: Optional[str] = os.environ.get("RESULT_BACKEND", "rpc://")
     docs_disabled: bool = False
+    base_url: str = "/api/v1/baruapepe"
 
 
 config = Config()

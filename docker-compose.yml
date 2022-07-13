@@ -1,18 +1,18 @@
 version: '3.8'
 
 services:
-  flower:
-    image: mher/flower:latest
-    container_name: email-flower-dashboard
-    hostname: flower
-    environment:
-        - CELERY_BROKER_URL=amqp://
-    ports:
-        - 5555:5555
+    flower:
+        image: mher/flower:latest
+        container_name: email-flower-dashboard
+        hostname: flower
+        environment:
+            - CELERY_BROKER_URL=amqp://
+        ports:
+            - "5555:5555"
 
-  redis:
-    image: redis:6.0.8-alpine
-    container_name: email-redis
-    hostname: redis
-    ports:
-        - 6379:6379
+    redis:
+        image: redis:6.0.8-alpine
+        container_name: email-redis
+        hostname: redis
+        ports:
+            - "6379:6379"

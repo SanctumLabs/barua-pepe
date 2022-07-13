@@ -3,7 +3,7 @@ from app.logger import log as logger
 from .dto import EmailRequestDto
 from app.api.dto import ApiResponse, BadRequest
 from app.exceptions import EmailGatewayError
-from app.tasks.mail_sending_task import mail_sending_task
+from app.worker.mail_sending_task import mail_sending_task
 from starlette import status
 
 router = APIRouter()

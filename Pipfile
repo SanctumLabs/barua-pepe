@@ -21,7 +21,7 @@ celery = {extras = ["redis"],version = "*"}
 pika = "*"
 fastapi = "*"
 uvicorn = "*"
-pydantic = "*"
+pydantic = {extras = ["email"], version = "*"}
 starlette = "*"
 
 [requires]

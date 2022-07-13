@@ -5,10 +5,8 @@ Ensure that the correct environment variables have been set for the SMTP client 
 These env variables are imported and included in the config.py file under the Config class for these to be available in
 the current application context
 """
-from app import mail
-from flask_mail import Message
+from app.config import config
 from app.logger import log as logger
-from flask import current_app
 from .exceptions import EmailSendingException, ServiceIntegrationException
 import requests
 
@@ -32,25 +30,28 @@ def send_plain_mail(to: list, subject: str, message: str, from_: dict = None, bc
         logger.info(f"Sending email to {to}")
 
         # Set the message sender it it exists else default it
-        sender = from_.get("email") if from_ else current_app.config.get("MAIL_DEFAULT_SENDER")
+        sender = from_.get("email") if from_ else config.mail_default_sender
 
-        msg = Message(
-            sender=sender,
-            subject=subject,
-            recipients=to,
-            cc=cc,
-            bcc=bcc)
+        # msg = Message(
+        #     sender=sender,
+        #     subject=subject,
+        #     recipients=to,
+        #     cc=cc,
+        #     bcc=bcc)
 
         if "<html" in message:
-            msg.html = message
+            pass
+            # msg.html = message
         else:
-            msg.body = message
+            pass
+            # msg.body = message
 
         if attachments:
             for attachment in attachments:
-                msg.attach(filename=attachment.get("filename"), content_type=attachment.get("content"))
+                pass
+                # msg.attach(filename=attachment.get("filename"), content_type=attachment.get("content"))
 
-        mail.send(msg)
+        # mail.send(msg)
         return dict(success=True, message="Message successfully sent")
     except Exception as e:
         # this should only happen if there is a fallback and we fail to send emails with the default setting
@@ -60,8 +61,8 @@ def send_plain_mail(to: list, subject: str, message: str, from_: dict = None, bc
         logger.warning(f"Using alternative to send email")
 
         # get the token and base url
-        token = current_app.config.get("MAIL_API_TOKEN")
-        base_url = current_app.config.get("MAIL_API_URL")
+        token = config.mail_api_token
+        base_url = config.mail_api_url
 
         recipients_to = [{"email": email} for email in to]
 
@@ -79,8 +80,8 @@ def send_plain_mail(to: list, subject: str, message: str, from_: dict = None, bc
             recipients.update(dict(bcc=recipients_bcc))
 
         sender = {
-            "email": from_.get("email") if from_ else current_app.config.get("MAIL_DEFAULT_SENDER"),
-            "name": from_.get("name") if from_ else current_app.config.get("MAIL_DEFAULT_SENDER")
+            "email": from_.get("email") if from_ else config.mail_default_sender,
+            "name": from_.get("name") if from_ else config.mail_default_sender
         }
 
         request_body = {
