@@ -15,8 +15,8 @@ async def on_teardown():
 
 
 app = FastAPI(
-    title="BaruaPepe",
-    description="Simple RESTful Email Server",
+    title=config.server_name,
+    description=config.description,
     version="0.0.1",
     on_startup=[on_startup],
     on_teardown=[on_teardown],

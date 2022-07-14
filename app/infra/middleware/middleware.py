@@ -1,9 +1,23 @@
 import time
 from fastapi import Request, FastAPI
 from app.logger import log
+from app.config import config
+import sentry_sdk
+from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 
 def attach_middlewares(app: FastAPI):
+    if config.sentry_enabled and config.sentry_dsn != "":
+        sentry_sdk.init(
+            dsn=config.sentry_dsn,
+            traces_sample_rate=config.sentry_traces_sample_rate,
+            debug=config.environment == "development",
+            environment=config.environment
+        )
+
+        asgi_app = SentryAsgiMiddleware(app=app)
+        log.debug(f"Sentry Configured: {asgi_app.app}")
+
     @app.middleware("http")
     async def log_request_time(request: Request, call_next):
         start_time = time.time()
@@ -23,4 +37,5 @@ def attach_middlewares(app: FastAPI):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["server"] = config.server_name
         return response

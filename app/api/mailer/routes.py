@@ -1,16 +1,16 @@
 from fastapi import APIRouter
 from app.logger import log as logger
-from .dto import EmailRequestDto
+from .dto import EmailRequestDto, EmailResponseDto
 from app.api.dto import ApiResponse, BadRequest
 from app.exceptions import EmailGatewayError
-from app.worker.mail_sending_task import mail_sending_task
+from app.tasks.mail_sending_task import mail_sending_task
 from starlette import status
 
-router = APIRouter()
+router = APIRouter(tags=["Email"])
 
 
 @logger.catch
-@router.post(path="/api/sendmail", summary="Send Email", description="Sends an email")
+@router.post(path="/sendmail", summary="Send Email", description="Sends an email", response_model=EmailResponseDto)
 async def send_plain_email(payload: EmailRequestDto):
     """
     Send email API function. This is a POST REST endpoint that accepts requests that meet the criteria defined by the

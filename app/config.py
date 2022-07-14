@@ -4,7 +4,7 @@ lifetime
 """
 import os
 from typing import Optional
-from pydantic import BaseSettings
+from pydantic import BaseSettings, BaseModel
 
 from dotenv import load_dotenv
 
@@ -23,6 +23,10 @@ class Config(BaseSettings):
     You can overwrite any of these settings by having an environment
     variable with the uppercased version of the name
     """
+    server_name: str = "Barua Pepe"
+    description: str = "Simple RESTful Email Server"
+    base_url: str = "/api/v1/baruapepe"
+
     environment: str = "development"
     mail_server: str = os.environ.get("HOST")
     mail_port: int = os.environ.get("SMTPPORT")
@@ -35,7 +39,10 @@ class Config(BaseSettings):
     mail_api_url: str = os.environ.get("MAIL_API_URL", "")
     result_backend: Optional[str] = os.environ.get("RESULT_BACKEND", "rpc://")
     docs_disabled: bool = False
-    base_url: str = "/api/v1/baruapepe"
+
+    sentry_dsn: str = ""
+    sentry_enabled: bool = False
+    sentry_traces_sample_rate: float = 0.5
 
 
 config = Config()

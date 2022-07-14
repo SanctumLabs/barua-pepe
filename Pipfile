@@ -19,10 +19,12 @@ requests = "*"
 marshmallow = "*"
 celery = {extras = ["redis"],version = "*"}
 pika = "*"
-fastapi = "*"
+fastapi = {extras = ["all"], version = "*"}
 uvicorn = "*"
 pydantic = {extras = ["email"], version = "*"}
 starlette = "*"
+sentry-sdk = "*"
+httpx = "*"
 
 [requires]
 python_version = "3.10"
