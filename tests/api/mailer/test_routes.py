@@ -8,6 +8,7 @@ base_url = "/api/v1/mail/"
 
 os.environ.update(BROKER_URL="memory://", RESULT_BACKEND="rpc")
 
+
 class TestMailApi(BaseTestCase):
     """
     Test Mail API

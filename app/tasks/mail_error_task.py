@@ -1,4 +1,4 @@
-from app.worker.celery_worker import celery_app
+from app.worker.celery_app import celery_app
 from app.logger import log
 import os
 

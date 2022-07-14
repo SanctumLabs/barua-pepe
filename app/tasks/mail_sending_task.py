@@ -1,4 +1,4 @@
-from app.worker.celery_worker import celery_app
+from app.worker.celery_app import celery_app
 from app.logger import log
 from app.services.email import send_plain_mail
 from .mail_error_task import mail_error_task
