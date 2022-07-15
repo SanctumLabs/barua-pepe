@@ -1,7 +1,7 @@
-from app.exceptions import EmailGatewayError
+from app.exceptions import AppException
 
 
-class TaskException(EmailGatewayError):
+class TaskException(AppException):
     def __init__(self, message=None):
         if message is None:
             self.message = "Worker failed to execute task"

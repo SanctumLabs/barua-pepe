@@ -13,6 +13,11 @@ class EmailSenderDto(BaseModel):
         return n
 
 
+class EmailRecipientDto(BaseModel):
+    email: EmailStr
+    name: str | None
+
+
 class EmailAttachmentDto(BaseModel):
     content: str
     filename: str
@@ -32,9 +37,9 @@ class EmailAttachmentDto(BaseModel):
 
 class EmailRequestDto(BaseModel):
     from_: EmailSenderDto = Field(alias="from")
-    to: List[EmailStr]
-    cc: List[EmailStr] | None
-    bcc: List[EmailStr] | None
+    to: List[EmailRecipientDto]
+    cc: List[EmailRecipientDto] | None
+    bcc: List[EmailRecipientDto] | None
     subject: str
     message: str
     attachments: List[EmailAttachmentDto] | None

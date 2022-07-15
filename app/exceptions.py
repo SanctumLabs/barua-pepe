@@ -1,4 +1,4 @@
-class EmailGatewayError(Exception):
+class AppException(Exception):
     """
     Base exception for all errors raised by the Application
     """
@@ -7,4 +7,4 @@ class EmailGatewayError(Exception):
         if msg is None:
             # default error message
             msg = "An error occurred in the EmailService App"
-        super(EmailGatewayError, self).__init__(msg)
+        super(AppException, self).__init__(msg)

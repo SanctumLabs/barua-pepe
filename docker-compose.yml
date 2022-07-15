@@ -7,13 +7,14 @@ services:
         hostname: flower
         environment:
             - CELERY_BROKER_URL=amqp://
-        command:
-            - "--broker_api=http://guest:guest@queue:15672/api//"
+#        command:
+#            - "--broker_api=http//guest:guest@queue:15672/api//"
+#            - "--broker=amqp://guest@queue:5672//"
         ports:
             - "5555:5555"
 
     cache:
-        image: redis:6.0.8-alpine
+        image: redis:7.0.2
         container_name: barua-pepe-cache
         hostname: cache
         ports:
@@ -35,7 +36,5 @@ services:
             - broker_data:/var/lib/rabbitmq
 
 volumes:
-  portainer_data:
   broker_data:
   cache_data:
-  db_data:

@@ -17,12 +17,19 @@ root = logging.getLogger()
 for handler in root.handlers:
     handler.setFormatter(console_formatter)
 
+
+def configure_log_sink(log_type: str):
+    return f"logs/{log_type}.log" if os.environ.get("ENV") == "development" else sys.stdout
+
+
+def backtrace() -> bool:
+    return True if os.environ.get("ENV", "development") == "development" else False
+
+
 # info log configurations
 log.add(
-    sink="logs/info.log" if os.environ.get("FLASK_ENV") == "local" else sys.stdout,
-    backtrace=True
-    if os.environ.get("FLASK_ENV", "development") == "development"
-    else False,
+    sink=configure_log_sink("info"),
+    backtrace=backtrace(),
     colorize=True,
     format="<green>{time}</green> <level>{message}</level>",
     # format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
@@ -32,10 +39,8 @@ log.add(
 
 # error logs
 log.add(
-    sink="logs/error.log" if os.environ.get("FLASK_ENV") == "local" else sys.stdout,
-    backtrace=True
-    if os.environ.get("FLASK_ENV", "development") == "development"
-    else False,
+    sink=configure_log_sink("error"),
+    backtrace=backtrace(),
     colorize=True,
     format="<green>{time}</green> <level>{message}</level>",
     # format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
@@ -45,10 +50,8 @@ log.add(
 
 # debug logs
 log.add(
-    sink="logs/debug.log" if os.environ.get("FLASK_ENV") == "local" else sys.stdout,
-    backtrace=True
-    if os.environ.get("FLASK_ENV", "development") == "development"
-    else False,
+    sink=configure_log_sink("debug"),
+    backtrace=backtrace(),
     colorize=True,
     format="<green>{time}</green> <level>{message}</level>",
     # format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
@@ -58,10 +61,8 @@ log.add(
 
 # warning logs
 log.add(
-    sink="logs/warn.log" if os.environ.get("FLASK_ENV") == "local" else sys.stdout,
-    backtrace=True
-    if os.environ.get("FLASK_ENV", "development") == "development"
-    else False,
+    sink=configure_log_sink("warn"),
+    backtrace=backtrace(),
     colorize=True,
     format="<green>{time}</green> <level>{message}</level>",
     # format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
@@ -71,10 +72,8 @@ log.add(
 
 # critical logs
 log.add(
-    sink="logs/critical.log" if os.environ.get("FLASK_ENV") == "local" else sys.stdout,
-    backtrace=True
-    if os.environ.get("FLASK_ENV", "development") == "development"
-    else False,
+    sink=configure_log_sink("critical"),
+    backtrace=backtrace(),
     colorize=True,
     format="<green>{time}</green> <level>{message}</level>",
     # format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
@@ -84,10 +83,8 @@ log.add(
 
 # trace logs
 log.add(
-    sink="logs/trace.log" if os.environ.get("FLASK_ENV") == "local" else sys.stdout,
-    backtrace=True
-    if os.environ.get("FLASK_ENV", "development") == "development"
-    else False,
+    sink=configure_log_sink("trace"),
+    backtrace=backtrace(),
     colorize=True,
     format="<green>{time}</green> <level>{message}</level>",
     # format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",

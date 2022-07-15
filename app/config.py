@@ -4,7 +4,7 @@ lifetime
 """
 import os
 from typing import Optional
-from pydantic import BaseSettings, BaseModel
+from pydantic import BaseSettings
 
 from dotenv import load_dotenv
 
@@ -34,7 +34,6 @@ class Config(BaseSettings):
     mail_use_ssl: bool = False
     mail_username: str = os.environ.get('USERNAME', None)
     mail_password: str = os.environ.get('PASSWORD', None)
-    mail_default_sender: str = os.environ.get("SENDEREMAILADDRESS", None)
     mail_api_token: str = os.environ.get("MAIL_API_TOKEN", "")
     mail_api_url: str = os.environ.get("MAIL_API_URL", "")
     result_backend: Optional[str] = os.environ.get("RESULT_BACKEND", "rpc://")

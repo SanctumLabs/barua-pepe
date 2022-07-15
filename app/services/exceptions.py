@@ -1,13 +1,13 @@
-from app.exceptions import EmailGatewayError
+from app.exceptions import AppException
 
 
-class EmailSendingException(EmailGatewayError):
+class EmailSendingException(AppException):
     def __init__(self, message=None):
         if message is None:
             self.message = "Failed to send email message"
 
 
-class ServiceIntegrationException(EmailGatewayError):
+class ServiceIntegrationException(AppException):
     def __init__(self, message=None):
         if message is None:
             self.message = "Service Integration Error"

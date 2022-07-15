@@ -21,3 +21,8 @@ test:
 # Runs tests with coverage
 test-cover:
 	pytest --cov=app tests/
+
+# Runs a local SMTP debugging server which will print out the message in the terminal window & discard them. This allows
+# for local testing
+smtp-server:
+	python -m smtpd -c DebuggingServer -n localhost:1025
