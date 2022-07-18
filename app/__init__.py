@@ -5,17 +5,17 @@ from app.config import config, Config
 from app.api import monitoring_router, mail_router
 from app.infra.handlers import attach_exception_handlers
 from app.infra.middleware import attach_middlewares
-from app.services.smtp_proxy import login_to_smtp_server, logout_from_smtp
+from app.services.smtp_proxy import SmtpServer
 
 
 async def on_startup():
     log.info("Starting Up")
-    login_to_smtp_server(username=config.mail_username, password=config.mail_password)
+    SmtpServer().login(username=config.mail_username, password=config.mail_password)
 
 
 async def on_teardown():
     log.info("Shutting down")
-    logout_from_smtp()
+    SmtpServer().logout()
 
 
 app = FastAPI(

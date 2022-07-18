@@ -26,19 +26,23 @@ class Config(BaseSettings):
     server_name: str = "Barua Pepe"
     description: str = "Simple RESTful Email Server"
     base_url: str = "/api/v1/baruapepe"
-
     environment: str = "development"
-    mail_server: str = os.environ.get("HOST")
-    mail_port: int = os.environ.get("SMTPPORT")
+
+    # smtp settings
+    mail_server: str = "localhost"
+    mail_port: int = 1025
     mail_use_tls: bool = False
     mail_use_ssl: bool = False
     mail_username: str = os.environ.get('USERNAME', None)
     mail_password: str = os.environ.get('PASSWORD', None)
+
+    # mail api settings
     mail_api_token: str = os.environ.get("MAIL_API_TOKEN", "")
     mail_api_url: str = os.environ.get("MAIL_API_URL", "")
     result_backend: Optional[str] = os.environ.get("RESULT_BACKEND", "rpc://")
     docs_disabled: bool = False
 
+    # sentry settings
     sentry_dsn: str = ""
     sentry_enabled: bool = False
     sentry_traces_sample_rate: float = 0.5

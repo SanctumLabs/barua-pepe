@@ -1,3 +1,4 @@
+from typing import Dict, List
 from app.worker.celery_app import celery_app
 from app.logger import log
 from app.services.mailer import send_plain_mail
@@ -7,13 +8,15 @@ from .exceptions import TaskException
 
 @celery_app.task(bind=True, default_retry_delay=30, max_retries=3, name="mail_sending_task")
 @log.catch
-def mail_sending_task(self, from_, to, cc, subject, bcc, message, attachments):
+def mail_sending_task(self, sender: Dict[str, str], recipients: List[Dict[str, str]],
+                      subject: str, message: str, cc: List[Dict[str, str]] | None = None,
+                      bcc: List[Dict[str, str]] | None = None, attachments: List[Dict[str, str]] | None = None):
     data = dict(
-        from_=from_,
-        to=to,
+        sender=sender,
+        recipients=recipients,
         cc=cc,
-        subject=subject,
         bcc=bcc,
+        subject=subject,
         message=message,
         attachments=attachments
     )

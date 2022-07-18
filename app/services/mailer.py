@@ -13,8 +13,10 @@ from email.mime.text import MIMEText
 from app.config import config
 from app.logger import log as logger
 from .exceptions import EmailSendingException, ServiceIntegrationException
-from .smtp_proxy import server as smtp_server
+from .smtp_proxy import SmtpServer
 import requests
+
+smtp_server = SmtpServer()
 
 
 @logger.catch
@@ -34,13 +36,13 @@ def send_plain_mail(sender: Dict[str, str], recipients: List[Dict[str, str]], su
     :param str subject: The subject of the email
     """
     try:
-        logger.info(f"Sending email to {recipients}")
+        logger.info(f"Sending email message to {recipients}, cc: {cc}, bcc:{bcc} from {sender}")
 
         body = MIMEMultipart()
         body["From"] = sender.get("email")
-        body["To"] = [email.get("email") for email in recipients]
-        body["Cc"] = [email.get("email") for email in cc]
-        body["Bcc"] = [email.get("email") for email in bcc]
+        body["To"] = ", ".join(email.get("email") for email in recipients)
+        body["Cc"] = ", ".join(email.get("email") for email in cc)
+        body["Bcc"] = ", ".join(email.get("email") for email in bcc)
         body["Subject"] = subject
 
         body.attach(MIMEText(message, "plain"))
@@ -67,20 +69,14 @@ def send_plain_mail(sender: Dict[str, str], recipients: List[Dict[str, str]], su
 
         text = body.as_string()
 
-        smtp_server.sendmail(from_addr=sender.get("email"), to_addrs=[email.get("email") for email in recipients],
-                             msg=text)
+        smtp_server.sendmail(sender=sender.get("email"), recipients=[email.get("email") for email in recipients],
+                             message=text)
 
-        return dict(success=True, message="Message successfully sent")
+        return dict(success=True, message=f"Message from {sender} successfully sent to {recipients}")
     except Exception as e:
         # this should only happen if there is a fallback and we fail to send emails with the default setting
         # if in that event, then the application should try sending an email using a MAIL API
-
-        logger.error(f"Failed to send email with error {e}")
-        logger.warning(f"Using alternative to send email")
-
-        # get the token and base url
-        token = config.mail_api_token
-        base_url = config.mail_api_url
+        logger.warning(f"Failed to send email with error {e}, using alternative to send email")
 
         recipients_to = [{"email": email.get("email")} for email in recipients]
 
@@ -121,17 +117,16 @@ def send_plain_mail(sender: Dict[str, str], recipients: List[Dict[str, str]], su
             request_body.update(dict(attachments=attachments))
 
         try:
-            headers = {"Authorization": f"Bearer {token}"}
-            response = requests.post(url=base_url, json=request_body, headers=headers)
+            headers = {"Authorization": f"Bearer {config.mail_api_token}"}
+            response = requests.post(url=config.mail_api_url, json=request_body, headers=headers)
 
             if not response.ok:
                 raise ServiceIntegrationException(f"Sending email failed with status code: {response.status_code}")
             else:
                 return dict(
                     success=True,
-                    message="Message successfully sent",
+                    message=f"Message from {sender} successfully sent to {recipients}",
                 )
-
         except Exception as e:
             logger.error(f"Failed to send message with alternative with error {e}")
             raise EmailSendingException(f"Failed to send email message with error {e}")

@@ -35,6 +35,15 @@ services:
         volumes:
             - broker_data:/var/lib/rabbitmq
 
+    smtp:
+        image: mailhog/mailhog:latest
+        container_name: barua-pepe-smtp
+        hostname: smtp
+        ports:
+            - "1025:1025"
+            - "8025:8025"
+
+
 volumes:
   broker_data:
   cache_data:
