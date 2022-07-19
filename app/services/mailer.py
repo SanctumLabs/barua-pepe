@@ -6,17 +6,13 @@ These env variables are imported and included in the config.py file under the Co
 the current application context
 """
 from typing import List, Dict
-from email import encoders
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email.mime.text import MIMEText
-from app.config import config
 from app.logger import log as logger
-from .exceptions import EmailSendingException, ServiceIntegrationException
+from .exceptions import EmailSendingException
 from .smtp_proxy import SmtpServer
-import requests
+from .sendgrid_email_service import SendGridEmailService
 
 smtp_server = SmtpServer()
+email_svc = SendGridEmailService()
 
 
 @logger.catch
@@ -35,98 +31,22 @@ def send_plain_mail(sender: Dict[str, str], recipients: List[Dict[str, str]], su
     :param list recipients: List of recipients of this email
     :param str subject: The subject of the email
     """
+    logger.info(f"Sending email message to {recipients}, cc: {cc}, bcc:{bcc} from {sender}")
     try:
-        logger.info(f"Sending email message to {recipients}, cc: {cc}, bcc:{bcc} from {sender}")
+        response = smtp_server.sendmail(sender=sender, recipients=recipients, cc=cc, bcc=bcc, subject=subject,
+                                        message=message,
+                                        attachments=attachments)
 
-        body = MIMEMultipart()
-        body["From"] = sender.get("email")
-        body["To"] = ", ".join(email.get("email") for email in recipients)
-        body["Cc"] = ", ".join(email.get("email") for email in cc)
-        body["Bcc"] = ", ".join(email.get("email") for email in bcc)
-        body["Subject"] = subject
-
-        body.attach(MIMEText(message, "plain"))
-
-        if attachments:
-            part = MIMEBase("application", "octet-stream")
-
-            for attachment in attachments:
-                filename = attachment.get("filename")
-                content = attachment.get("content")
-
-                part.set_payload(content)
-
-                # Encode file in ASCII characters to send by email
-                encoders.encode_base64(part)
-
-                # Add header as key/value pair to attachment part
-                part.add_header(
-                    "Content-Disposition",
-                    f"attachment; filename= {filename}",
-                )
-
-            body.attach(part)
-
-        text = body.as_string()
-
-        smtp_server.sendmail(sender=sender.get("email"), recipients=[email.get("email") for email in recipients],
-                             message=text)
-
-        return dict(success=True, message=f"Message from {sender} successfully sent to {recipients}")
+        return response
     except Exception as e:
         # this should only happen if there is a fallback and we fail to send emails with the default setting
         # if in that event, then the application should try sending an email using a MAIL API
         logger.warning(f"Failed to send email with error {e}, using alternative to send email")
-
-        recipients_to = [{"email": email.get("email")} for email in recipients]
-
-        # this will be used to construct the recipients of the email
-        recipients = dict(to=recipients_to)
-
-        if cc:
-            recipients_cc = [{"email": email.get("email")} for email in cc]
-
-            recipients.update(dict(cc=recipients_cc))
-
-        if bcc:
-            recipients_bcc = [{"email": email.get("email")} for email in bcc]
-
-            recipients.update(dict(bcc=recipients_bcc))
-
-        sender = {
-            "email": sender.get("email"),
-            "name": sender.get("name")
-        }
-
-        request_body = {
-            "personalizations": [
-                recipients
-            ],
-            "from": sender,
-            "subject": subject,
-            "content": [
-                {
-                    "type": "text/html",
-                    "value": message
-                }
-            ]
-        }
-
-        # if we have attachments, add them to the request body
-        if attachments:
-            request_body.update(dict(attachments=attachments))
-
         try:
-            headers = {"Authorization": f"Bearer {config.mail_api_token}"}
-            response = requests.post(url=config.mail_api_url, json=request_body, headers=headers)
-
-            if not response.ok:
-                raise ServiceIntegrationException(f"Sending email failed with status code: {response.status_code}")
-            else:
-                return dict(
-                    success=True,
-                    message=f"Message from {sender} successfully sent to {recipients}",
-                )
+            response = email_svc.send_email(sender=sender, recipients=recipients, cc=cc, bcc=bcc, subject=subject,
+                                            message=message,
+                                            attachments=attachments)
+            return response
         except Exception as e:
             logger.error(f"Failed to send message with alternative with error {e}")
             raise EmailSendingException(f"Failed to send email message with error {e}")

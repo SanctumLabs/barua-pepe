@@ -3,6 +3,7 @@ Configurations for application. These are global variables that the app will use
 lifetime
 """
 import os
+from functools import lru_cache
 from typing import Optional
 from pydantic import BaseSettings
 
@@ -27,20 +28,21 @@ class Config(BaseSettings):
     description: str = "Simple RESTful Email Server"
     base_url: str = "/api/v1/baruapepe"
     environment: str = "development"
+    docs_disabled: bool = False
 
     # smtp settings
     mail_server: str = "localhost"
     mail_port: int = 1025
     mail_use_tls: bool = False
     mail_use_ssl: bool = False
-    mail_username: str = os.environ.get('USERNAME', None)
-    mail_password: str = os.environ.get('PASSWORD', None)
+    mail_username: str = "baruapepe"
+    mail_password: str = "password"
 
     # mail api settings
-    mail_api_token: str = os.environ.get("MAIL_API_TOKEN", "")
-    mail_api_url: str = os.environ.get("MAIL_API_URL", "")
-    result_backend: Optional[str] = os.environ.get("RESULT_BACKEND", "rpc://")
-    docs_disabled: bool = False
+    mail_api_token: str = ""
+    mail_api_url: str = ""
+
+    result_backend: Optional[str] = "rpc://"
 
     # sentry settings
     sentry_dsn: str = ""
@@ -49,3 +51,8 @@ class Config(BaseSettings):
 
 
 config = Config()
+
+
+@lru_cache()
+def get_config():
+    return Config()
