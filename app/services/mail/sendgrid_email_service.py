@@ -1,12 +1,13 @@
 from typing import Dict, List
 import sendgrid as mail_client
 from sendgrid.helpers.mail import Email, To, Bcc, Cc, Mail, Content, HtmlContent, Attachment, MimeType, FileContent, \
-    FileName
+    FileName, FileType
 from app.utils import singleton
 from app.config import get_config
 from app.logger import log
 from .exceptions import ServiceIntegrationException
 from .email_service import EmailService
+from .types import RecipientList, EmailParticipant
 
 
 @singleton
@@ -21,8 +22,8 @@ class SendGridEmailService(EmailService):
         self.token = token
         self.mail_client = mail_client.SendGridAPIClient(api_key=token)
 
-    def send_email(self, sender: Dict[str, str], recipients: List[Dict[str, str]], cc: List[Dict[str, str]] | None,
-                   bcc: List[Dict[str, str]] | None, subject: str, message: str,
+    def send_email(self, sender: EmailParticipant, recipients: RecipientList, cc: RecipientList | None,
+                   bcc: RecipientList | None, subject: str, message: str,
                    attachments: List[Dict[str, str]] | None):
 
         from_email = Email(email=sender.get("email"), name=sender.get("name"))
@@ -47,7 +48,7 @@ class SendGridEmailService(EmailService):
         if attachments:
             attachment_content = [
                 Attachment(file_content=FileContent(attachment.get("content")),
-                           file_name=FileName(attachment.get("filename")))
+                           file_name=FileName(attachment.get("filename")), file_type=FileType(attachment.get("type")))
                 for attachment in
                 attachments]
             mail.attachment = attachment_content

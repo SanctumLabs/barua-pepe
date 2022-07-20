@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Literal
 from mailchimp_transactional.api_client import ApiClientError
 import mailchimp_transactional as mail_client
 from app.utils import singleton
@@ -6,6 +6,7 @@ from app.config import get_config
 from app.logger import log
 from .exceptions import ServiceIntegrationException
 from .email_service import EmailService
+from .types import RecipientList, EmailParticipant
 
 
 @singleton
@@ -27,28 +28,30 @@ class MailChimpEmailService(EmailService):
             log.error(f"Failed to configure mail service")
             raise ServiceIntegrationException("Failed to configure mail service")
 
-    def send_email(self, sender: Dict[str, str], recipients: List[Dict[str, str]], cc: List[Dict[str, str]] | None,
-                   bcc: List[Dict[str, str]] | None, subject: str, message: str,
+    def send_email(self, sender: EmailParticipant, recipients: RecipientList, cc: RecipientList | None,
+                   bcc: RecipientList | None, subject: str, message: str,
                    attachments: List[Dict[str, str]] | None):
 
-        to = [{"email": recipient.get("email"), "type": "to"} for recipient in recipients]
-
-        if cc:
-            for cc_recipient in cc:
-                recipient = {"email": cc_recipient.get("email"), "type": "cc"}
-                to.append(recipient)
-
-        if bcc:
-            for bcc_recipient in bcc:
-                recipient = {"email": bcc_recipient.get("email"), "type": "bcc"}
-                to.append(recipient)
+        to = self._setup_recipients(recipients=recipients, recipient_type="to")
+        to + self._setup_recipients(recipients=cc, recipient_type="cc")
+        to + self._setup_recipients(recipients=bcc, recipient_type="bcc")
 
         mail = {
             "from_email": sender.get("email"),
             "subject": subject,
-            "text": message,
             "to": to
         }
+
+        if sender.get("name"):
+            mail.update(dict(from_name=sender.get("name")))
+
+        if "<html" in message:
+            mail.update(dict(html=message))
+        else:
+            mail.update(dict(text=message))
+
+        if attachments:
+            mail.update(dict(attachments=attachments))
 
         try:
             response = self.mail_client.messages.send(dict(message=mail))
@@ -60,3 +63,17 @@ class MailChimpEmailService(EmailService):
         except Exception as e:
             log.error(f"Failed to send email {e}")
             raise ServiceIntegrationException(f"Sending email failed with {e}")
+
+    @staticmethod
+    def _setup_recipients(recipients: RecipientList, recipient_type: Literal['to', 'cc', 'bcc']) -> RecipientList:
+        to = []
+        for recipient in recipients:
+            name = recipient.get("name")
+
+            recipient_info = {"email": recipient.get("email"), "type": recipient_type}
+
+            if name:
+                recipient_info.update(dict(name=name))
+
+            to.append(recipient_info)
+        return to
