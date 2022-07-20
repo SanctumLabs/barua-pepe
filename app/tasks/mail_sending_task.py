@@ -1,7 +1,7 @@
 from typing import Dict, List
 from app.worker.celery_app import celery_app
 from app.logger import log
-from app.services.mailer import send_plain_mail
+from app.services.mail import send_plain_mail
 from .mail_error_task import mail_error_task
 from .exceptions import TaskException
 

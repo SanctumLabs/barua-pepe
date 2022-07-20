@@ -4,6 +4,7 @@ from pydantic import BaseModel, validator
 class EmailAttachment(BaseModel):
     content: str
     filename: str
+    type: str
 
     @validator("content")
     def subject_must_be_valid(cls, s):

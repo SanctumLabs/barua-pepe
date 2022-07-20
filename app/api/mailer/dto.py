@@ -21,6 +21,8 @@ class EmailRecipientDto(BaseModel):
 class EmailAttachmentDto(BaseModel):
     content: str
     filename: str
+    # Mimetype of the attachment document
+    type: str
 
     @validator("content")
     def subject_must_be_valid(cls, s):

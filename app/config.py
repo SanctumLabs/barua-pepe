@@ -49,6 +49,10 @@ class Config(BaseSettings):
     sentry_enabled: bool = False
     sentry_traces_sample_rate: float = 0.5
 
+    # security settings
+    username: str = "barua-pepe-user"
+    password: str = "barua-pepe-password"
+
 
 config = Config()
 
