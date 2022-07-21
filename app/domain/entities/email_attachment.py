@@ -4,6 +4,7 @@ from pydantic import BaseModel, validator
 class EmailAttachment(BaseModel):
     content: str
     filename: str
+    # Mimetype of the attachment document
     type: str
 
     @validator("content")

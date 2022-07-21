@@ -35,6 +35,7 @@ def mail_sending_task(
         if not result:
             raise TaskException("Mail sending task failed")
         return result
+    # pylint: disabled=broad-except
     except Exception as exc:
         log.error(
             f"Error sending email with error {exc}. Attempt {self.request.retries}/{self.max_retries} ..."

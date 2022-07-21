@@ -2,8 +2,7 @@ import os
 import unittest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from app import app, get_config
-from app.config import Config
+from app.config import Config, get_config
 
 
 class BaseTestCase(unittest.TestCase):

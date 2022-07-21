@@ -1,14 +1,16 @@
+"""
+This attaches middleware to the Application
+"""
 import time
 from fastapi import Request, FastAPI
 from app.logger import log
 from app.config import config
+import sentry_sdk
+from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 
 def attach_middlewares(app: FastAPI):
     if config.sentry_enabled and config.sentry_dsn != "":
-        import sentry_sdk
-        from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
-
         sentry_sdk.init(
             dsn=config.sentry_dsn,
             traces_sample_rate=config.sentry_traces_sample_rate,

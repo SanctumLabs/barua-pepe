@@ -1,3 +1,6 @@
+"""
+Application exception handlers
+"""
 from fastapi import Request, FastAPI
 from starlette.exceptions import HTTPException
 from fastapi.responses import JSONResponse
@@ -32,7 +35,8 @@ def attach_exception_handlers(app: FastAPI):
     async def api_exception_handler(request: Request, error: HTTPException):
         try:
             message = error.detail
-        except Exception as e:
+        # pylint: disabled=broad-except
+        except Exception as err:
             message = "Internal server error"
 
         return JSONResponse(

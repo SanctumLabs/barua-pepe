@@ -19,13 +19,19 @@ for handler in root.handlers:
 
 
 def configure_log_sink(log_type: str):
+    """
+    Configures log sing based on the log type and the enrironment
+    @param log_type log type could be either info, error, warn, debug, etc
+    @returns the log sink to use
+    """
     return (
         f"logs/{log_type}.log" if os.environ.get("ENV") == "development" else sys.stdout
     )
 
 
 def backtrace() -> bool:
-    return True if os.environ.get("ENV", "development") == "development" else False
+    """Configures backtrace based on the env"""
+    return os.environ.get("ENV", "development") == "development"
 
 
 # info log configurations

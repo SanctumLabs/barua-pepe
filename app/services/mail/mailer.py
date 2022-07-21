@@ -52,11 +52,12 @@ def send_plain_mail(
         )
 
         return response
-    except Exception as e:
+    # pylint: disabled=broad-except
+    except Exception as err:
         # this should only happen if there is a fallback and we fail to send emails with the default setting
         # if in that event, then the application should try sending an email using a MAIL API
         logger.warning(
-            f"Failed to send email with error {e}, using alternative to send email"
+            f"Failed to send email with error {err}, using alternative to send email"
         )
         try:
             response = email_svc.send_email(
@@ -69,6 +70,9 @@ def send_plain_mail(
                 attachments=attachments,
             )
             return response
-        except Exception as e:
-            logger.error(f"Failed to send message with alternative with error {e}")
-            raise EmailSendingException(f"Failed to send email message with error {e}")
+        # pylint: disabled=broad-except
+        except Exception as error:
+            logger.error(f"Failed to send message with alternative with error {error}")
+            raise EmailSendingException(
+                f"Failed to send email message from {sender} to {recipients}"
+            ) from error

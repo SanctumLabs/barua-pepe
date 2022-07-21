@@ -69,9 +69,12 @@ class MailChimpEmailService(EmailService):
                 success=True,
                 message=f"Message from {sender} successfully sent to {recipients}",
             )
-        except Exception as e:
-            log.error(f"Failed to send email {e}")
-            raise ServiceIntegrationException(f"Sending email failed with {e}")
+        # pylint: disabled=broad-except
+        except Exception as err:
+            log.error(f"Failed to send email {err}")
+            raise ServiceIntegrationException(
+                f"Sending email from {sender} to {recipients} failed"
+            ) from err
 
     @staticmethod
     def _setup_recipients(

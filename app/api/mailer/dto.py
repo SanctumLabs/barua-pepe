@@ -1,40 +1,20 @@
 from typing import List
-from pydantic import BaseModel, validator, EmailStr, Field
+from pydantic import BaseModel, validator, Field
+from app.domain.entities.email_sender import EmailSender
+from app.domain.entities.email_recipient import EmailRecipient
+from app.domain.entities.email_attachment import EmailAttachment
 
 
-class EmailSenderDto(BaseModel):
-    email: EmailStr
-    name: str
-
-    @validator("name")
-    def name_must_be_valid(cls, n):
-        if n == "":
-            raise ValueError("must not be empty")
-        return n
+class EmailSenderDto(EmailSender):
+    """Email Sender Payload"""
 
 
-class EmailRecipientDto(BaseModel):
-    email: EmailStr
-    name: str | None
+class EmailRecipientDto(EmailRecipient):
+    """Email Recipient Payload"""
 
 
-class EmailAttachmentDto(BaseModel):
-    content: str
-    filename: str
-    # Mimetype of the attachment document
-    type: str
-
-    @validator("content")
-    def subject_must_be_valid(cls, s):
-        if len(s) == 0:
-            raise ValueError("must not be empty")
-        return s
-
-    @validator("filename")
-    def message_must_be_valid(cls, m):
-        if len(m) == 0:
-            raise ValueError("must not be empty")
-        return m
+class EmailAttachmentDto(EmailAttachment):
+    """Email Attachment Payload"""
 
 
 class EmailRequestDto(BaseModel):

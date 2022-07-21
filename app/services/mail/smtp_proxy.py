@@ -38,16 +38,18 @@ class SmtpServer(object):
                     user=config.mail_username, password=config.mail_password
                 )
             self.server.ehlo()
-        except Exception as e:
-            log.error(f"Failed to login {e}")
+        # pylint: disabled=broad-except
+        except Exception as err:
+            log.error(f"Failed to login {err}")
             self.server.quit()
 
     def logout(self):
         log.info(f"Logging out of SMTP")
         try:
             self.server.quit()
-        except Exception as e:
-            log.error(f"Failed to quite smtp server {e}")
+        # pylint: disabled=broad-except
+        except Exception as err:
+            log.error(f"Failed to quite smtp server {err}")
             self.server.quit()
 
     def sendmail(
@@ -104,14 +106,18 @@ class SmtpServer(object):
                 success=True,
                 message=f"Message from {sender} successfully sent to {recipients}",
             )
-        except Exception as e:
-            log.error(f"Failed to send email {e}")
-            raise ServiceIntegrationException(f"Sending email failed with {e}")
+        # pylint: disabled=broad-except
+        except Exception as err:
+            log.error(f"Failed to send email {err}")
+            raise ServiceIntegrationException(
+                f"Sending email from {sender} to {recipients} failed"
+            ) from err
 
     def __check_connection(self) -> bool:
         try:
             status = self.server.noop()[0]
-        except Exception as e:
-            log.error(f"SMTP Server is disconnected {e}")
+        # pylint: disabled=broad-except
+        except Exception as err:
+            log.error(f"SMTP Server is disconnected {err}")
             status = -1
         return status == 250

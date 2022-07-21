@@ -3,7 +3,7 @@ Configurations for application. These are global variables that the app will use
 lifetime
 """
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, AnyStr
 from pydantic import BaseSettings
 
 from dotenv import load_dotenv
@@ -11,9 +11,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def load_from_file(path: str):
-    with open(path) as f:
-        return f.read()
+def load_from_file(path: str, mode: str, encoding: str) -> AnyStr:
+    """
+    Convenience function that reads contents of a file
+    @param path file path
+    @param mode file mode to use when opening file
+    @param encoding file encoding
+    @returns contents of the file
+    """
+    with open(file=path, mode=mode, encoding=encoding) as file:
+        return file.read()
 
 
 class Config(BaseSettings):
@@ -23,6 +30,8 @@ class Config(BaseSettings):
     You can overwrite any of these settings by having an environment
     variable with the uppercased version of the name
     """
+
+    # pylint: disable: too-few-public-methods
 
     server_name: str = "Barua Pepe"
     description: str = "Simple RESTful Email Server"
@@ -59,4 +68,7 @@ config = Config()
 
 @lru_cache()
 def get_config():
+    """
+    Gets configuration This is wrapped with lru_cache to ensure we don't continuously read from .env file on restarts
+    """
     return Config()
