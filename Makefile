@@ -29,3 +29,6 @@ smtp-server:
 
 format:
 	black app
+
+lint:
+	pylint app
