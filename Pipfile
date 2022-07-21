@@ -10,6 +10,7 @@ pytest-cov = "*"
 better-exceptions = "*"
 pre-commit = "*"
 coverage = "*"
+black = "*"
 
 [packages]
 gunicorn = "*"
