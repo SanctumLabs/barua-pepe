@@ -26,3 +26,6 @@ test-cover:
 # for local testing
 smtp-server:
 	python -m smtpd -c DebuggingServer -n localhost:1025
+
+lint:
+	black app
