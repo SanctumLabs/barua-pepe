@@ -16,9 +16,15 @@ email_svc = SendGridEmailService()
 
 
 @logger.catch
-def send_plain_mail(sender: Dict[str, str], recipients: List[Dict[str, str]], subject: str, message: str,
-                    cc: List[Dict[str, str]] | None = None, bcc: List[Dict[str, str]] | None = None,
-                    attachments: List[Dict[str, str]] | None = None):
+def send_plain_mail(
+    sender: Dict[str, str],
+    recipients: List[Dict[str, str]],
+    subject: str,
+    message: str,
+    cc: List[Dict[str, str]] | None = None,
+    bcc: List[Dict[str, str]] | None = None,
+    attachments: List[Dict[str, str]] | None = None,
+):
     """
     Sends a plain text email to a list of recipients with optional Carbon Copies and Blind Carbon Copies. This includes
     an option for sending email attachments
@@ -31,21 +37,37 @@ def send_plain_mail(sender: Dict[str, str], recipients: List[Dict[str, str]], su
     :param list recipients: List of recipients of this email
     :param str subject: The subject of the email
     """
-    logger.info(f"Sending email message to {recipients}, cc: {cc}, bcc:{bcc} from {sender}")
+    logger.info(
+        f"Sending email message to {recipients}, cc: {cc}, bcc:{bcc} from {sender}"
+    )
     try:
-        response = smtp_server.sendmail(sender=sender, recipients=recipients, cc=cc, bcc=bcc, subject=subject,
-                                        message=message,
-                                        attachments=attachments)
+        response = smtp_server.sendmail(
+            sender=sender,
+            recipients=recipients,
+            cc=cc,
+            bcc=bcc,
+            subject=subject,
+            message=message,
+            attachments=attachments,
+        )
 
         return response
     except Exception as e:
         # this should only happen if there is a fallback and we fail to send emails with the default setting
         # if in that event, then the application should try sending an email using a MAIL API
-        logger.warning(f"Failed to send email with error {e}, using alternative to send email")
+        logger.warning(
+            f"Failed to send email with error {e}, using alternative to send email"
+        )
         try:
-            response = email_svc.send_email(sender=sender, recipients=recipients, cc=cc, bcc=bcc, subject=subject,
-                                            message=message,
-                                            attachments=attachments)
+            response = email_svc.send_email(
+                sender=sender,
+                recipients=recipients,
+                cc=cc,
+                bcc=bcc,
+                subject=subject,
+                message=message,
+                attachments=attachments,
+            )
             return response
         except Exception as e:
             logger.error(f"Failed to send message with alternative with error {e}")

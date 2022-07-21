@@ -11,7 +11,14 @@ class EmailService(ABC):
         pass
 
     @abstractmethod
-    def send_email(self, sender: Dict[str, str], recipients: List[Dict[str, str]], cc: List[Dict[str, str]] | None,
-                   bcc: List[Dict[str, str]] | None, subject: str, message: str,
-                   attachments: List[Dict[str, str]] | None):
+    def send_email(
+        self,
+        sender: Dict[str, str],
+        recipients: List[Dict[str, str]],
+        cc: List[Dict[str, str]] | None,
+        bcc: List[Dict[str, str]] | None,
+        subject: str,
+        message: str,
+        attachments: List[Dict[str, str]] | None,
+    ):
         raise NotImplementedError("send_email not yet implemented")

@@ -14,8 +14,9 @@ from .exceptions import ServiceIntegrationException
 
 @singleton
 class SmtpServer(object):
-
-    def __init__(self, host: str | None = config.mail_server, port: int | None = config.mail_port):
+    def __init__(
+        self, host: str | None = config.mail_server, port: int | None = config.mail_port
+    ):
         self.host = host
         self.port = port
         self.context = ssl.create_default_context()
@@ -33,7 +34,9 @@ class SmtpServer(object):
                 self.server.starttls(context=self.context)
                 self.server.login(user=username, password=password)
             if config.mail_use_ssl:
-                self.server.login(user=config.mail_username, password=config.mail_password)
+                self.server.login(
+                    user=config.mail_username, password=config.mail_password
+                )
             self.server.ehlo()
         except Exception as e:
             log.error(f"Failed to login {e}")
@@ -47,9 +50,16 @@ class SmtpServer(object):
             log.error(f"Failed to quite smtp server {e}")
             self.server.quit()
 
-    def sendmail(self, sender: Dict[str, str], recipients: List[Dict[str, str]], subject: str, message: str,
-                 cc: List[Dict[str, str]] | None = None, bcc: List[Dict[str, str]] | None = None,
-                 attachments: List[Dict[str, str]] | None = None):
+    def sendmail(
+        self,
+        sender: Dict[str, str],
+        recipients: List[Dict[str, str]],
+        subject: str,
+        message: str,
+        cc: List[Dict[str, str]] | None = None,
+        bcc: List[Dict[str, str]] | None = None,
+        attachments: List[Dict[str, str]] | None = None,
+    ):
 
         body = MIMEMultipart()
         body["From"] = sender.get("email")
@@ -85,8 +95,11 @@ class SmtpServer(object):
         try:
             if not self.__check_connection():
                 self.server.connect(host=config.mail_server, port=config.mail_port)
-            self.server.sendmail(from_addr=sender.get("email"), to_addrs=[email.get("email") for email in recipients],
-                                 msg=text)
+            self.server.sendmail(
+                from_addr=sender.get("email"),
+                to_addrs=[email.get("email") for email in recipients],
+                msg=text,
+            )
             return dict(
                 success=True,
                 message=f"Message from {sender} successfully sent to {recipients}",

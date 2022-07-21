@@ -10,7 +10,12 @@ router = APIRouter(tags=["Email"])
 
 
 @logger.catch
-@router.post(path="/sendmail", summary="Send Email", description="Sends an email", response_model=EmailResponseDto)
+@router.post(
+    path="/sendmail",
+    summary="Send Email",
+    description="Sends an email",
+    response_model=EmailResponseDto,
+)
 async def send_plain_email(payload: EmailRequestDto, background_tasks: BackgroundTasks):
     """
     Send email API function. This is a POST REST endpoint that accepts requests that meet the criteria defined by the
@@ -30,7 +35,7 @@ async def send_plain_email(payload: EmailRequestDto, background_tasks: Backgroun
             subject=payload.subject,
             bcc=payload.bcc,
             message=payload.message,
-            attachments=payload.attachments
+            attachments=payload.attachments,
         )
 
         email_request = EmailRequest(**data)
@@ -38,12 +43,10 @@ async def send_plain_email(payload: EmailRequestDto, background_tasks: Backgroun
         background_tasks.add_task(send_email, email_request)
 
         return ApiResponse(
-            status=status.HTTP_200_OK,
-            message="Email sent out successfully"
+            status=status.HTTP_200_OK, message="Email sent out successfully"
         )
     except AppException as e:
         logger.error(f"Failed to send email to {payload.to} with error {e}")
         return ApiResponse(
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            message="Failed to send email"
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR, message="Failed to send email"
         )

@@ -6,11 +6,20 @@ from .mail_error_task import mail_error_task
 from .exceptions import TaskException
 
 
-@celery_app.task(bind=True, default_retry_delay=30, max_retries=3, name="mail_sending_task")
+@celery_app.task(
+    bind=True, default_retry_delay=30, max_retries=3, name="mail_sending_task"
+)
 @log.catch
-def mail_sending_task(self, sender: Dict[str, str], recipients: List[Dict[str, str]],
-                      subject: str, message: str, cc: List[Dict[str, str]] | None = None,
-                      bcc: List[Dict[str, str]] | None = None, attachments: List[Dict[str, str]] | None = None):
+def mail_sending_task(
+    self,
+    sender: Dict[str, str],
+    recipients: List[Dict[str, str]],
+    subject: str,
+    message: str,
+    cc: List[Dict[str, str]] | None = None,
+    bcc: List[Dict[str, str]] | None = None,
+    attachments: List[Dict[str, str]] | None = None,
+):
     data = dict(
         sender=sender,
         recipients=recipients,
@@ -18,7 +27,7 @@ def mail_sending_task(self, sender: Dict[str, str], recipients: List[Dict[str, s
         bcc=bcc,
         subject=subject,
         message=message,
-        attachments=attachments
+        attachments=attachments,
     )
 
     try:
@@ -27,7 +36,9 @@ def mail_sending_task(self, sender: Dict[str, str], recipients: List[Dict[str, s
             raise TaskException("Mail sending task failed")
         return result
     except Exception as exc:
-        log.error(f"Error sending email with error {exc}. Attempt {self.request.retries}/{self.max_retries} ...")
+        log.error(
+            f"Error sending email with error {exc}. Attempt {self.request.retries}/{self.max_retries} ..."
+        )
 
         if self.request.retries == self.max_retries:
             log.warning(f"Maximum attempts reached, pushing to error queue...")

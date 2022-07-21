@@ -30,7 +30,9 @@ app = FastAPI(
 )
 
 app.include_router(monitoring_router)
-app.include_router(mail_router, prefix=config.base_url, dependencies=[Depends(get_current_auth)])
+app.include_router(
+    mail_router, prefix=config.base_url, dependencies=[Depends(get_current_auth)]
+)
 attach_exception_handlers(app)
 attach_middlewares(app)
 

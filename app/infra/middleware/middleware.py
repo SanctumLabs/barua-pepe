@@ -8,11 +8,12 @@ def attach_middlewares(app: FastAPI):
     if config.sentry_enabled and config.sentry_dsn != "":
         import sentry_sdk
         from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+
         sentry_sdk.init(
             dsn=config.sentry_dsn,
             traces_sample_rate=config.sentry_traces_sample_rate,
             debug=config.environment == "development",
-            environment=config.environment
+            environment=config.environment,
         )
 
         asgi_app = SentryAsgiMiddleware(app=app)

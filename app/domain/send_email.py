@@ -10,7 +10,9 @@ def send_email(request: EmailRequest):
         bcc=[bcc.dict() for bcc in request.bcc] if request.bcc else [],
         subject=request.subject,
         message=request.message,
-        attachments=[attachment.dict() for attachment in request.attachments] if request.attachments else []
+        attachments=[attachment.dict() for attachment in request.attachments]
+        if request.attachments
+        else [],
     )
 
     mail_sending_task.apply_async(kwargs=data)

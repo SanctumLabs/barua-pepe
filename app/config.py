@@ -2,7 +2,6 @@
 Configurations for application. These are global variables that the app will use in its entire
 lifetime
 """
-import os
 from functools import lru_cache
 from typing import Optional
 from pydantic import BaseSettings
@@ -24,6 +23,7 @@ class Config(BaseSettings):
     You can overwrite any of these settings by having an environment
     variable with the uppercased version of the name
     """
+
     server_name: str = "Barua Pepe"
     description: str = "Simple RESTful Email Server"
     base_url: str = "/api/v1/baruapepe"

@@ -15,7 +15,11 @@ class MailChimpEmailService(EmailService):
     Email Service wrapper around Mailchimp email service provider
     """
 
-    def __init__(self, url: str = get_config().mail_api_url, token: str = get_config().mail_api_token):
+    def __init__(
+        self,
+        url: str = get_config().mail_api_url,
+        token: str = get_config().mail_api_token,
+    ):
         super().__init__()
         self.url = url
         self.token = token
@@ -28,19 +32,22 @@ class MailChimpEmailService(EmailService):
             log.error(f"Failed to configure mail service")
             raise ServiceIntegrationException("Failed to configure mail service")
 
-    def send_email(self, sender: EmailParticipant, recipients: RecipientList, cc: RecipientList | None,
-                   bcc: RecipientList | None, subject: str, message: str,
-                   attachments: List[Dict[str, str]] | None):
+    def send_email(
+        self,
+        sender: EmailParticipant,
+        recipients: RecipientList,
+        cc: RecipientList | None,
+        bcc: RecipientList | None,
+        subject: str,
+        message: str,
+        attachments: List[Dict[str, str]] | None,
+    ):
 
         to = self._setup_recipients(recipients=recipients, recipient_type="to")
         to + self._setup_recipients(recipients=cc, recipient_type="cc")
         to + self._setup_recipients(recipients=bcc, recipient_type="bcc")
 
-        mail = {
-            "from_email": sender.get("email"),
-            "subject": subject,
-            "to": to
-        }
+        mail = {"from_email": sender.get("email"), "subject": subject, "to": to}
 
         if sender.get("name"):
             mail.update(dict(from_name=sender.get("name")))
@@ -55,7 +62,9 @@ class MailChimpEmailService(EmailService):
 
         try:
             response = self.mail_client.messages.send(dict(message=mail))
-            log.debug(f"Message sent successfully from {sender} to {recipients}. Res: {response}")
+            log.debug(
+                f"Message sent successfully from {sender} to {recipients}. Res: {response}"
+            )
             return dict(
                 success=True,
                 message=f"Message from {sender} successfully sent to {recipients}",
@@ -65,7 +74,9 @@ class MailChimpEmailService(EmailService):
             raise ServiceIntegrationException(f"Sending email failed with {e}")
 
     @staticmethod
-    def _setup_recipients(recipients: RecipientList, recipient_type: Literal['to', 'cc', 'bcc']) -> RecipientList:
+    def _setup_recipients(
+        recipients: RecipientList, recipient_type: Literal["to", "cc", "bcc"]
+    ) -> RecipientList:
         to = []
         for recipient in recipients:
             name = recipient.get("name")
