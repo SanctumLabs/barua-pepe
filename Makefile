@@ -27,5 +27,5 @@ test-cover:
 smtp-server:
 	python -m smtpd -c DebuggingServer -n localhost:1025
 
-lint:
+format:
 	black app
