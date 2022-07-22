@@ -9,13 +9,10 @@ pylint = "*"
 pytest-cov = "*"
 better-exceptions = "*"
 pre-commit = "*"
-flask-testing = "*"
 coverage = "*"
+black = "*"
 
 [packages]
-flask = "*"
-flask-mail = "*"
-flask-script = "*"
 gunicorn = "*"
 loguru = "*"
 python-dotenv = "*"
@@ -23,6 +20,14 @@ requests = "*"
 marshmallow = "*"
 celery = {extras = ["redis"],version = "*"}
 pika = "*"
+fastapi = {extras = ["all"], version = "*"}
+uvicorn = "*"
+pydantic = {extras = ["email"], version = "*"}
+starlette = "*"
+sentry-sdk = "*"
+httpx = "*"
+mailchimp-transactional = "*"
+sendgrid = "*"
 
 [requires]
-python_version = "3.8"
+python_version = "3.10"

@@ -1,18 +1,49 @@
-version: '3.7'
+version: '3.8'
 
 services:
-  flower:
-    image: mher/flower:latest
-    container_name: email-flower-dashboard
-    hostname: flower
-    environment:
-        - CELERY_BROKER_URL=amqp://
-    ports:
-        - 5555:5555
+    flower:
+        image: mher/flower:latest
+        container_name: barua-pepe-flower-dashboard
+        hostname: flower
+        environment:
+            - CELERY_BROKER_URL=amqp://
+#        command:
+#            - "--broker_api=http//guest:guest@queue:15672/api//"
+#            - "--broker=amqp://guest@queue:5672//"
+        ports:
+            - "5555:5555"
 
-  redis:
-    image: redis:6.0.8-alpine
-    container_name: email-redis
-    hostname: redis
-    ports:
-        - 6379:6379
+    cache:
+        image: redis:7.0.2
+        container_name: barua-pepe-cache
+        hostname: cache
+        ports:
+            - "6379:6379"
+        volumes:
+            - cache_data:/data
+
+    broker:
+        image: rabbitmq:3.7.9-management
+        container_name: barua-pepe-queue
+        hostname: broker
+        environment:
+            - RABBITMQ_DEFAULT_USER=guest
+            - RABBITMQ_DEFAULT_PASS=guest
+        ports:
+            - "5672:5672"
+            - "15672:15672"
+        volumes:
+            - broker_data:/var/lib/rabbitmq
+
+    smtp:
+        image: mailhog/mailhog:latest
+        container_name: barua-pepe-smtp
+        hostname: smtp
+        ports:
+            - "1025:1025"
+            - "8025:8025"
+
+
+volumes:
+  broker_data:
+  cache_data:

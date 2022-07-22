@@ -1,12 +1,5 @@
-# flake8: noqa
-from flask import Blueprint
-
-mail_api = Blueprint(
-    name="MailApi",
-    import_name=__name__,
-    url_prefix=f"/api/v1/mail",
-    static_folder="static",
-    template_folder="templates",
-)
-
-from . import rest_api
+"""
+API Routes
+"""
+from app.api.monitoring.routes import router as monitoring_router
+from app.api.mailer.routes import router as mail_router

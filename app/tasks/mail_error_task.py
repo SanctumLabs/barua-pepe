@@ -1,25 +1,49 @@
-from app import celery_app
-from app.logger import log
-from app.constants import EMAIL_ERROR_EXCHANGE, EMAIL_ERROR_ROUTING_KEY, EMAIL_ERROR_QUEUE_NAME
-from .exceptions import TaskException
+"""
+Error Tasks
+"""
 import os
+from typing import Dict, List
+from app.worker.celery_app import celery_app
+from app.logger import log
 
 broker_host = os.environ.get("BROKER_HOST")
 broker_port = os.environ.get("BROKER_PORT")
 broker_username = os.environ.get("BROKER_USER")
 broker_password = os.environ.get("BROKER_PASSWORD")
 
-@celery_app.task(bind=True, default_retry_delay=30, max_retries=3, name="mail_error_task")
+
+@celery_app.task(
+    bind=True, default_retry_delay=30, max_retries=3, name="mail_error_task"
+)
 @log.catch
-def mail_error_task(self, from_, to, cc, subject, bcc, message, attachments):
-    log.info(f"Received from_={from_}, to:{to}, cc:{cc}, subject:{subject}, bcc:{bcc}, message:{message}, attachments:{attachments}")
+# pylint: disable=too-many-arguments
+def mail_error_task(
+    # pylint: disable=unused-argument
+    self,
+    sender: Dict[str, str],
+    recipients: List[Dict[str, str]],
+    subject: str,
+    message: str,
+    carbon_copy: List[Dict[str, str]] | None = None,
+    bcc: List[Dict[str, str]] | None = None,
+    attachments: List[Dict[str, str]] | None = None,
+):
+    """
+    Mail Error Task. This handles tasks that have failed to deliver messages
+    """
+    log.info(
+        f"Received from_={sender}, to:{recipients}, cc:{carbon_copy}, subject:{subject}, bcc:{bcc}, message:{message}, "
+        f"attachments:{attachments}"
+    )
 
 
-@celery_app.task(bind=True, default_retry_delay=30, max_retries=2, name="mail_error_callback_task")
+@celery_app.task(
+    bind=True, default_retry_delay=30, max_retries=2, name="mail_error_callback_task"
+)
 @log.catch
+# pylint: disable=unused-argument
 def mail_error_callback_task(self):
     """
-    This handles even callbacks for emails as received from SMTP or email provider. In the event there was a failure in sending out an email
-    address
+    This handles even callbacks for emails as received from SMTP or email provider. In the event there was a failure in
+    sending out an email address
     """
-    pass

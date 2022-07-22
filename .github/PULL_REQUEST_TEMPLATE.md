@@ -7,12 +7,11 @@ Fixes # (issue)
 ## How can we test this?
 
 Please describe the tests that you ran to verify your changes.
- 
+
 Please also note any relevant details for your test configuration.
 
 ## Checklist:
 
-- [ ] I have not introduced new bugs :rofl:
 - [ ] My code follows the style guidelines of this project
 - [ ] I have performed a self-review of my own code
 - [ ] I have commented my code, particularly in hard-to-understand areas

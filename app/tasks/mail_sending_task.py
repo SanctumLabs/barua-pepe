@@ -1,43 +1,56 @@
-from app import celery_app
+"""
+Mail sending tasks can be found here
+"""
+from typing import Dict, List
+from app.worker.celery_app import celery_app
 from app.logger import log
-from app.services.email import send_plain_mail
-from app.constants import EMAIL_ERROR_EXCHANGE, EMAIL_ERROR_ROUTING_KEY, EMAIL_ERROR_QUEUE_NAME
+from app.services.mail import send_plain_mail
 from .mail_error_task import mail_error_task
 from .exceptions import TaskException
 
 
-@celery_app.task(bind=True, default_retry_delay=30, max_retries=3, name="mail_sending_task")
+@celery_app.task(
+    bind=True, default_retry_delay=30, max_retries=3, name="mail_sending_task"
+)
 @log.catch
-def mail_sending_task(self, from_, to, cc, subject, bcc, message, attachments):
+# pylint: disable=too-many-arguments
+def mail_sending_task(
+    self,
+    sender: Dict[str, str],
+    recipients: List[Dict[str, str]],
+    subject: str,
+    message: str,
+    ccs: List[Dict[str, str]] | None = None,
+    bcc: List[Dict[str, str]] | None = None,
+    attachments: List[Dict[str, str]] | None = None,
+):
+    """
+    Worker task that handles sending email messages in the background
+    """
+    # pylint: disable=duplicate-code
+    data = dict(
+        sender=sender,
+        recipients=recipients,
+        ccs=ccs,
+        bcc=bcc,
+        subject=subject,
+        message=message,
+        attachments=attachments,
+    )
+
     try:
-        result = send_plain_mail(
-            from_=from_,
-            to=to,
-            cc=cc,
-            subject=subject,
-            bcc=bcc,
-            message=message,
-            attachments=attachments
+        result = send_plain_mail(**data)
+        if not result:
+            raise TaskException(f"Mail sending task failed. Result: {result}")
+        return result
+    # pylint: disable=broad-except
+    except Exception as exc:
+        log.error(
+            f"Error sending email with error {exc}. Attempt {self.request.retries}/{self.max_retries} ..."
         )
 
-        if not result:
-            raise TaskException("Mail sending task failed")
-        return result
-    except Exception as exc:
-        log.error(f"Error sending email with error {exc}. Attempt {self.request.retries}/{self.max_retries} ...")
-
         if self.request.retries == self.max_retries:
-            log.warning(f"Maximum attempts reached, pushing to error queue...")
-            mail_error_task.apply_async(
-                kwargs=dict(
-                    from_=from_, 
-                    to=to, 
-                    cc=cc, 
-                    subject=subject, 
-                    bcc=bcc, 
-                    message=message, 
-                    attachments=attachments
-                )
-            )
+            log.warning("Maximum attempts reached, pushing to error queue...")
+            mail_error_task.apply_async(kwargs=data)
 
         raise self.retry(countdown=30 * 2, exc=exc, max_retries=3)
