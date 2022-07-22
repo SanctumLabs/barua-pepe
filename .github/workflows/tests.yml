@@ -29,10 +29,8 @@ jobs:
             -   name: Install Dependencies
                 run: |
                     pip install pipenv
-                    pipenv lock -r > requirements.txt
+                    pipenv lock -r --dev > requirements.txt
                     pip install -r requirements.txt
 
             -   name: Run Tests
-                run: |
-                    pipenv shell
-                    make test
+                run: make test
