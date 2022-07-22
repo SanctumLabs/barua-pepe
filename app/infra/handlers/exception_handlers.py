@@ -2,16 +2,16 @@
 Application exception handlers
 """
 from fastapi import Request, FastAPI
-from starlette.exceptions import HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException
 from app.api.dto import ApiError
 
 
-def _rewrite_error(e):
-    field = e["loc"][-1]
-    message = e["msg"].capitalize()
-    typ = e["type"]
+def _rewrite_error(err):
+    field = err["loc"][-1]
+    message = err["msg"].capitalize()
+    typ = err["type"]
 
     if typ == "value_error.missing":
         message = "This field is required"
@@ -20,7 +20,12 @@ def _rewrite_error(e):
 
 
 def attach_exception_handlers(app: FastAPI):
+    """
+    Attaches exception handlers to application
+    """
+
     @app.exception_handler(ApiError)
+    # pylint: disable=unused-argument
     async def api_exception_handler(request: Request, error: ApiError):
         return JSONResponse(
             status_code=error.status,
@@ -32,12 +37,13 @@ def attach_exception_handlers(app: FastAPI):
         )
 
     @app.exception_handler(HTTPException)
-    async def api_exception_handler(request: Request, error: HTTPException):
+    # pylint: disable=unused-argument
+    async def http_exception_handler(request: Request, error: HTTPException):
         try:
             message = error.detail
-        # pylint: disabled=broad-except
+        # pylint: disable=broad-except
         except Exception as err:
-            message = "Internal server error"
+            message = err or "Internal server error"
 
         return JSONResponse(
             status_code=error.status_code,
@@ -45,13 +51,15 @@ def attach_exception_handlers(app: FastAPI):
         )
 
     @app.exception_handler(Exception)
-    async def api_exception_handler(request: Request, error: Exception):
+    # pylint: disable=unused-argument
+    async def exception_handler(request: Request, error: Exception):
         return JSONResponse(
             status_code=500, content={"status": 500, "message": "Internal server error"}
         )
 
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request, exc):
+    # pylint: disable=unused-argument
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
         error_list = [_rewrite_error(e) for e in exc.errors()]
         errors = {}
         for error in error_list:

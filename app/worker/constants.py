@@ -1,3 +1,6 @@
+"""
+Worker Constants
+"""
 EMAIL_DEFAULT_QUEUE_NAME = "email-default-queue"
 EMAIL_DEFAULT_ROUTING_KEY = "email-default-route-key"
 EMAIL_DEFAULT_EXCHANGE = "email-default-exchange"

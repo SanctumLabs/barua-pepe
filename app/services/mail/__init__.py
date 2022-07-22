@@ -1,3 +1,6 @@
+"""
+Mail services
+"""
 from .email_service import EmailService
 from .sendgrid_email_service import SendGridEmailService
 from .mailchimp_email_service import MailChimpEmailService

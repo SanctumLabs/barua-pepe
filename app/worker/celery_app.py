@@ -1,3 +1,6 @@
+"""
+Celery application
+"""
 import os
 from celery import Celery
 from kombu import Queue

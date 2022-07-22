@@ -16,12 +16,13 @@ email_svc = SendGridEmailService()
 
 
 @logger.catch
+# pylint: disable=too-many-arguments
 def send_plain_mail(
     sender: Dict[str, str],
     recipients: List[Dict[str, str]],
     subject: str,
     message: str,
-    cc: List[Dict[str, str]] | None = None,
+    ccs: List[Dict[str, str]] | None = None,
     bcc: List[Dict[str, str]] | None = None,
     attachments: List[Dict[str, str]] | None = None,
 ):
@@ -31,20 +32,20 @@ def send_plain_mail(
     :param dict sender: sender of email (Optional), will default to value set in MAIL_DEFAULT_SENDER config
     This is a dictionary with the email and name key value pairs
     :param list attachments: List of attachments to send in the email
-    :param list cc: Carbon Copy recipients (Optional)
+    :param list ccs: Carbon Copy recipients (Optional)
     :param list bcc: Blind Carbon copy recipients (Optional)
     :param str message: Message to send in body of email
     :param list recipients: List of recipients of this email
     :param str subject: The subject of the email
     """
     logger.info(
-        f"Sending email message to {recipients}, cc: {cc}, bcc:{bcc} from {sender}"
+        f"Sending email message to {recipients}, cc: {ccs}, bcc:{bcc} from {sender}"
     )
     try:
         response = smtp_server.sendmail(
             sender=sender,
             recipients=recipients,
-            cc=cc,
+            ccs=ccs,
             bcc=bcc,
             subject=subject,
             message=message,
@@ -52,7 +53,7 @@ def send_plain_mail(
         )
 
         return response
-    # pylint: disabled=broad-except
+    # pylint: disable=broad-except
     except Exception as err:
         # this should only happen if there is a fallback and we fail to send emails with the default setting
         # if in that event, then the application should try sending an email using a MAIL API
@@ -63,14 +64,14 @@ def send_plain_mail(
             response = email_svc.send_email(
                 sender=sender,
                 recipients=recipients,
-                cc=cc,
+                ccs=ccs,
                 bcc=bcc,
                 subject=subject,
                 message=message,
                 attachments=attachments,
             )
             return response
-        # pylint: disabled=broad-except
+        # pylint: disable=broad-except
         except Exception as error:
             logger.error(f"Failed to send message with alternative with error {error}")
             raise EmailSendingException(

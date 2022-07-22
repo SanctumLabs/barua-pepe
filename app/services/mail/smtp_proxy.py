@@ -1,3 +1,6 @@
+"""
+SMTP Proxy service. This wraps functionality around an SMTP library
+"""
 from typing import List, Dict
 import smtplib
 import ssl
@@ -13,7 +16,11 @@ from .exceptions import ServiceIntegrationException
 
 
 @singleton
-class SmtpServer(object):
+class SmtpServer:
+    """
+    SMTP Server
+    """
+
     def __init__(
         self, host: str | None = config.mail_server, port: int | None = config.mail_port
     ):
@@ -25,9 +32,11 @@ class SmtpServer(object):
         else:
             self.server = smtplib.SMTP(host=host, port=port)
 
-    # @staticmethod
     def login(self, username: str, password: str):
-        log.info(f"Logging into SMTP")
+        """
+        Logs into SMTP server
+        """
+        log.info(f"Logging into SMTP {self.host}")
         try:
             self.server.ehlo()
             if config.mail_use_tls:
@@ -38,35 +47,41 @@ class SmtpServer(object):
                     user=config.mail_username, password=config.mail_password
                 )
             self.server.ehlo()
-        # pylint: disabled=broad-except
+        # pylint: disable=broad-except
         except Exception as err:
             log.error(f"Failed to login {err}")
             self.server.quit()
 
     def logout(self):
-        log.info(f"Logging out of SMTP")
+        """
+        Logs out of SMTP server
+        """
+        log.info(f"Logging out of SMTP {self.host}")
         try:
             self.server.quit()
-        # pylint: disabled=broad-except
+        # pylint: disable=broad-except
         except Exception as err:
             log.error(f"Failed to quite smtp server {err}")
             self.server.quit()
 
+    # pylint: disable=too-many-arguments
     def sendmail(
         self,
         sender: Dict[str, str],
         recipients: List[Dict[str, str]],
         subject: str,
         message: str,
-        cc: List[Dict[str, str]] | None = None,
+        ccs: List[Dict[str, str]] | None = None,
         bcc: List[Dict[str, str]] | None = None,
         attachments: List[Dict[str, str]] | None = None,
     ):
-
+        """
+        Sends plain email
+        """
         body = MIMEMultipart()
         body["From"] = sender.get("email")
         body["To"] = ", ".join(email.get("email") for email in recipients)
-        body["Cc"] = ", ".join(email.get("email") for email in cc)
+        body["Cc"] = ", ".join(email.get("email") for email in ccs)
         body["Bcc"] = ", ".join(email.get("email") for email in bcc)
         body["Subject"] = subject
 
@@ -97,6 +112,7 @@ class SmtpServer(object):
         try:
             if not self.__check_connection():
                 self.server.connect(host=config.mail_server, port=config.mail_port)
+            # pylint: disable=duplicate-code
             self.server.sendmail(
                 from_addr=sender.get("email"),
                 to_addrs=[email.get("email") for email in recipients],
@@ -106,7 +122,7 @@ class SmtpServer(object):
                 success=True,
                 message=f"Message from {sender} successfully sent to {recipients}",
             )
-        # pylint: disabled=broad-except
+        # pylint: disable=broad-except
         except Exception as err:
             log.error(f"Failed to send email {err}")
             raise ServiceIntegrationException(
@@ -114,9 +130,12 @@ class SmtpServer(object):
             ) from err
 
     def __check_connection(self) -> bool:
+        """
+        Checks connection of SMTP server
+        """
         try:
             status = self.server.noop()[0]
-        # pylint: disabled=broad-except
+        # pylint: disable=broad-except
         except Exception as err:
             log.error(f"SMTP Server is disconnected {err}")
             status = -1

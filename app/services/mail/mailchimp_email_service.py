@@ -1,3 +1,6 @@
+"""
+Wrapper for MailChimp Email Service provider
+"""
 from typing import Dict, List, Literal
 from mailchimp_transactional.api_client import ApiClientError
 import mailchimp_transactional as mail_client
@@ -10,6 +13,7 @@ from .types import RecipientList, EmailParticipant
 
 
 @singleton
+# pylint: disable=too-few-public-methods
 class MailChimpEmailService(EmailService):
     """
     Email Service wrapper around Mailchimp email service provider
@@ -29,25 +33,26 @@ class MailChimpEmailService(EmailService):
             self.mail_client.users.ping()
             log.info("Successfully setup mail service")
         except ApiClientError as error:
-            log.error(f"Failed to configure mail service")
-            raise ServiceIntegrationException("Failed to configure mail service")
+            log.error(f"Failed to configure mail service {error}")
+            raise ServiceIntegrationException("Failed to configure mail service") from error
 
+    # pylint: disable=too-many-arguments
     def send_email(
         self,
         sender: EmailParticipant,
         recipients: RecipientList,
-        cc: RecipientList | None,
+        ccs: RecipientList | None,
         bcc: RecipientList | None,
         subject: str,
         message: str,
         attachments: List[Dict[str, str]] | None,
     ):
 
-        to = self._setup_recipients(recipients=recipients, recipient_type="to")
-        to + self._setup_recipients(recipients=cc, recipient_type="cc")
-        to + self._setup_recipients(recipients=bcc, recipient_type="bcc")
+        recipients_to = self._setup_recipients(recipients=recipients, recipient_type="to")
+        recipients_to += self._setup_recipients(recipients=ccs, recipient_type="cc")
+        recipients_to += self._setup_recipients(recipients=bcc, recipient_type="bcc")
 
-        mail = {"from_email": sender.get("email"), "subject": subject, "to": to}
+        mail = {"from_email": sender.get("email"), "subject": subject, "to": recipients_to}
 
         if sender.get("name"):
             mail.update(dict(from_name=sender.get("name")))
@@ -69,8 +74,7 @@ class MailChimpEmailService(EmailService):
                 success=True,
                 message=f"Message from {sender} successfully sent to {recipients}",
             )
-        # pylint: disabled=broad-except
-        except Exception as err:
+        except ApiClientError as err:
             log.error(f"Failed to send email {err}")
             raise ServiceIntegrationException(
                 f"Sending email from {sender} to {recipients} failed"
@@ -80,7 +84,7 @@ class MailChimpEmailService(EmailService):
     def _setup_recipients(
         recipients: RecipientList, recipient_type: Literal["to", "cc", "bcc"]
     ) -> RecipientList:
-        to = []
+        recipients_to = []
         for recipient in recipients:
             name = recipient.get("name")
 
@@ -89,5 +93,5 @@ class MailChimpEmailService(EmailService):
             if name:
                 recipient_info.update(dict(name=name))
 
-            to.append(recipient_info)
-        return to
+            recipients_to.append(recipient_info)
+        return recipients_to

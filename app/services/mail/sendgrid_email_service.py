@@ -1,3 +1,6 @@
+"""
+Wrapper for Sendgrid Email Service Provider
+"""
 from typing import Dict, List
 import sendgrid as mail_client
 from sendgrid.helpers.mail import (
@@ -23,6 +26,7 @@ from .types import RecipientList, EmailParticipant
 
 
 @singleton
+# pylint: disable=too-few-public-methods
 class SendGridEmailService(EmailService):
     """
     Email Service wrapper around Sendgrid email service provider
@@ -38,11 +42,12 @@ class SendGridEmailService(EmailService):
         self.token = token
         self.mail_client = mail_client.SendGridAPIClient(api_key=token)
 
+    # pylint: disable=too-many-arguments
     def send_email(
         self,
         sender: EmailParticipant,
         recipients: RecipientList,
-        cc: RecipientList | None,
+        ccs: RecipientList | None,
         bcc: RecipientList | None,
         subject: str,
         message: str,
@@ -58,27 +63,23 @@ class SendGridEmailService(EmailService):
         mail = Mail(from_email=from_email, to_emails=to_emails, subject=subject)
 
         if "<html" in message:
-            content = HtmlContent(content=message)
-            mail.content = content
+            mail.content = HtmlContent(content=message)
         else:
-            content = Content(mime_type=MimeType.text, content=message)
-            mail.content = content
+            mail.content = Content(mime_type=MimeType.text, content=message)
 
-        if cc:
-            cc_emails = [
+        if ccs:
+            mail.cc = [
                 Cc(email=recipient.get("email"), name=recipient.get("name"))
-                for recipient in cc
+                for recipient in ccs
             ]
-            mail.cc = cc_emails
         if bcc:
-            bcc_emails = [
+            mail.bcc = [
                 Bcc(email=recipient.get("email"), name=recipient.get("name"))
                 for recipient in bcc
             ]
-            mail.bcc = bcc_emails
 
         if attachments:
-            attachment_content = [
+            mail.attachment = [
                 Attachment(
                     file_content=FileContent(attachment.get("content")),
                     file_name=FileName(attachment.get("filename")),
@@ -86,7 +87,6 @@ class SendGridEmailService(EmailService):
                 )
                 for attachment in attachments
             ]
-            mail.attachment = attachment_content
 
         try:
             response = self.mail_client.client.mail.send.post(request_body=mail.get())
@@ -95,12 +95,12 @@ class SendGridEmailService(EmailService):
                 raise ServiceIntegrationException(
                     f"Sending email failed with status code: {status_code}"
                 )
-            else:
-                return dict(
-                    success=True,
-                    message=f"Message from {sender} successfully sent to {recipients}",
-                )
-        # pylint: disabled=broad-except
+            # pylint: disable=duplicate-code
+            return dict(
+                success=True,
+                message=f"Message from {sender} successfully sent to {recipients}",
+            )
+        # pylint: disable=broad-except
         except Exception as err:
             log.error(f"Failed to send email {err}")
             raise ServiceIntegrationException(

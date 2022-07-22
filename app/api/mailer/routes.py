@@ -1,10 +1,13 @@
+"""
+Mail Router
+"""
 from fastapi import APIRouter, BackgroundTasks
+from starlette import status
 from app.logger import log as logger
-from .dto import EmailRequestDto, EmailResponseDto
 from app.api.dto import ApiResponse, BadRequest
 from app.exceptions import AppException
 from app.domain.send_email import send_email, EmailRequest
-from starlette import status
+from .dto import EmailRequestDto, EmailResponseDto
 
 router = APIRouter(tags=["Email"])
 
@@ -45,8 +48,8 @@ async def send_plain_email(payload: EmailRequestDto, background_tasks: Backgroun
         return ApiResponse(
             status=status.HTTP_200_OK, message="Email sent out successfully"
         )
-    except AppException as e:
-        logger.error(f"Failed to send email to {payload.to} with error {e}")
+    except AppException as exc:
+        logger.error(f"Failed to send email to {payload.to} with error {exc}")
         return ApiResponse(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR, message="Failed to send email"
         )

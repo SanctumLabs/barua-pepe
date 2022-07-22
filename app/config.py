@@ -23,6 +23,7 @@ def load_from_file(path: str, mode: str, encoding: str) -> AnyStr:
         return file.read()
 
 
+# pylint: disable=too-few-public-methods
 class Config(BaseSettings):
     """
     Application settings
@@ -30,8 +31,6 @@ class Config(BaseSettings):
     You can overwrite any of these settings by having an environment
     variable with the uppercased version of the name
     """
-
-    # pylint: disable: too-few-public-methods
 
     server_name: str = "Barua Pepe"
     description: str = "Simple RESTful Email Server"

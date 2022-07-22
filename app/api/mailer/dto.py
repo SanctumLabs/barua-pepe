@@ -1,23 +1,34 @@
+"""
+DTO objects for mail endpoint
+"""
 from typing import List
+# pylint: disable=no-name-in-module
 from pydantic import BaseModel, validator, Field
 from app.domain.entities.email_sender import EmailSender
 from app.domain.entities.email_recipient import EmailRecipient
 from app.domain.entities.email_attachment import EmailAttachment
 
 
+# pylint: disable=too-few-public-methods
 class EmailSenderDto(EmailSender):
     """Email Sender Payload"""
 
 
+# pylint: disable=too-few-public-methods
 class EmailRecipientDto(EmailRecipient):
     """Email Recipient Payload"""
 
 
+# pylint: disable=too-few-public-methods
 class EmailAttachmentDto(EmailAttachment):
     """Email Attachment Payload"""
 
 
+# pylint: disable=too-few-public-methods
 class EmailRequestDto(BaseModel):
+    """
+    Email Request Payload
+    """
     from_: EmailSenderDto = Field(alias="from")
     to: List[EmailRecipientDto]
     cc: List[EmailRecipientDto] | None
@@ -27,18 +38,30 @@ class EmailRequestDto(BaseModel):
     attachments: List[EmailAttachmentDto] | None
 
     @validator("subject")
-    def subject_must_be_valid(cls, s):
-        if len(s) == 0:
+    # pylint: disable=no-self-argument
+    def subject_must_be_valid(cls, sub):
+        """
+        Validates subject
+        """
+        if len(sub) == 0:
             raise ValueError("must not be empty")
-        return s
+        return sub
 
     @validator("message")
-    def message_must_be_valid(cls, m):
-        if len(m) == 0:
+    # pylint: disable=no-self-argument
+    def message_must_be_valid(cls, mes):
+        """
+        Validates message
+        """
+        if len(mes) == 0:
             raise ValueError("must not be empty")
-        return m
+        return mes
 
 
+# pylint: disable=too-few-public-methods
 class EmailResponseDto(BaseModel):
+    """
+    Email Response Payload
+    """
     status: int
     message: str

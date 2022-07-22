@@ -1,3 +1,9 @@
+"""
+Utility functions
+"""
+
+
+# pylint: disable=unused-argument
 def singleton(cls, *args, **kw):
     """
     Decorator used to check if an instance of a class already exists.

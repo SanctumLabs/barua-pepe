@@ -1,11 +1,19 @@
+"""
+Email Request
+"""
 from typing import List
+# pylint: disable=no-name-in-module
+from pydantic import BaseModel, validator
 from .email_sender import EmailSender
 from .email_attachment import EmailAttachment
 from .email_recipient import EmailRecipient
-from pydantic import BaseModel, validator
 
 
+# pylint: disable=too-few-public-methods
 class EmailRequest(BaseModel):
+    """
+    Represents an email Request
+    """
     sender: EmailSender
     recipient: List[EmailRecipient]
     cc: List[EmailRecipient] | None
@@ -15,13 +23,17 @@ class EmailRequest(BaseModel):
     attachments: List[EmailAttachment] | None
 
     @validator("subject")
-    def subject_must_be_valid(cls, s):
-        if len(s) == 0:
-            raise ValueError("must not be empty")
-        return s
+    # pylint: disable=no-self-argument
+    def subject_must_be_valid(cls, sub):
+        """Validates subject"""
+        if len(sub) == 0:
+            raise ValueError("subject must not be empty")
+        return sub
 
     @validator("message")
-    def message_must_be_valid(cls, m):
-        if len(m) == 0:
-            raise ValueError("must not be empty")
-        return m
+    # pylint: disable=no-self-argument
+    def message_must_be_valid(cls, mes):
+        """Validates message"""
+        if len(mes) == 0:
+            raise ValueError("message must not be empty")
+        return mes

@@ -1,7 +1,13 @@
+"""
+Task Exceptions
+"""
 from app.exceptions import AppException
 
 
 class TaskException(AppException):
+    """
+    Task Exception
+    """
+
     def __init__(self, message=None):
-        if message is None:
-            self.message = "Worker failed to execute task"
+        super().__init__(message or "Worker failed to execute task")
