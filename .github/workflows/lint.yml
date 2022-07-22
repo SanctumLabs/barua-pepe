@@ -29,4 +29,6 @@ jobs:
                     pipenv install
 
             -   name: Run Linting
-                run: make lint
+                run: |
+                    pipenv shell
+                    make lint
