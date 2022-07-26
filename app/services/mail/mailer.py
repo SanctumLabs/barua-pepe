@@ -7,12 +7,11 @@ the current application context
 """
 from typing import List, Dict
 from app.logger import log as logger
+from app.config import get_config
 from .exceptions import EmailSendingException
 from .smtp_proxy import SmtpServer
 from .sendgrid_email_service import SendGridEmailService
-
-smtp_server = SmtpServer()
-email_svc = SendGridEmailService()
+from .email_service import EmailService
 
 
 @logger.catch
@@ -38,11 +37,18 @@ def send_plain_mail(
     :param list recipients: List of recipients of this email
     :param str subject: The subject of the email
     """
+    email_svc = EmailService
+    if get_config().mail_smtp_enabled:
+        email_svc = SmtpServer()
+    else:
+        email_svc = SendGridEmailService()
+
     logger.info(
         f"Sending email message to {recipients}, cc: {ccs}, bcc:{bcc} from {sender}"
     )
+
     try:
-        response = smtp_server.sendmail(
+        response = email_svc.sendmail(
             sender=sender,
             recipients=recipients,
             ccs=ccs,

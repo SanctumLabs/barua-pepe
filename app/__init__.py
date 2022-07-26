@@ -15,7 +15,8 @@ async def on_startup():
     on startup hook, we place startup code here that the application needs during runtime
     """
     log.info("Starting Up")
-    SmtpServer().login(username=config.mail_username, password=config.mail_password)
+    if config.mail_smtp_enabled:
+        SmtpServer().login(username=config.mail_username, password=config.mail_password)
 
 
 async def on_teardown():
@@ -23,7 +24,8 @@ async def on_teardown():
     Performs application cleanup if necessary
     """
     log.info("Shutting down")
-    SmtpServer().logout()
+    if config.mail_smtp_enabled:
+        SmtpServer().logout()
 
 
 app = FastAPI(

@@ -39,6 +39,7 @@ class Config(BaseSettings):
     docs_disabled: bool = False
 
     # smtp settings
+    mail_smtp_enabled: bool = True
     mail_server: str = "localhost"
     mail_port: int = 1025
     mail_use_tls: bool = False

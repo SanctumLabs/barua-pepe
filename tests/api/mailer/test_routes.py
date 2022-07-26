@@ -349,7 +349,7 @@ class TestMailApi(BaseTestCase):
             self.assertIsNotNone(response_json.get("errors"))
 
     @pytest.mark.anyio
-    @patch("app.tasks.mail_sending_task.mail_sending_task.apply_async", return_value=dict(success=True))
+    @patch("app.domain.send_email.send_email", return_value=dict(success=True))
     async def test_returns_200_with_valid_json_body(self, mock_sending_task):
         """Test email api returns 200 with an valid JSON body calling send plain email use case"""
         async with self.async_client as ac:
@@ -379,7 +379,7 @@ class TestMailApi(BaseTestCase):
             self.assertEqual("Email sent out successfully", response_json.get("message"))
 
     @pytest.mark.anyio
-    @patch("app.tasks.mail_sending_task.mail_sending_task.apply_async", side_effect=AppException("Boom!"))
+    @patch("app.domain.send_email.send_email", side_effect=AppException("Boom!"))
     async def test_returns_500_with_valid_json_body_but_task_fails(self, mock_sending_task):
         """Test email api returns 500 with an valid JSON body calling send plain email use case but exception is
         thrown """

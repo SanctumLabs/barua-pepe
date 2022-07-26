@@ -5,8 +5,15 @@
 [![Code Scanning](https://github.com/SanctumLabs/barua-pepe/actions/workflows/codeql.yml/badge.svg)](https://github.com/SanctumLabs/barua-pepe/actions/workflows/codeql.yml)
 [![Lint](https://github.com/SanctumLabs/barua-pepe/actions/workflows/lint.yml/badge.svg)](https://github.com/SanctumLabs/barua-pepe/actions/workflows/lint.yml)
 [![Tests](https://github.com/SanctumLabs/barua-pepe/actions/workflows/tests.yml/badge.svg)](https://github.com/SanctumLabs/barua-pepe/actions/workflows/tests.yml)
+[![Docker](https://github.com/SanctumLabs/barua-pepe/actions/workflows/docker.yml/badge.svg)](https://github.com/SanctumLabs/barua-pepe/actions/workflows/docker.yml)
 
-Email Gateway that handles sending emails. This needs an SMTP server already setup.
+_Barua Pepe_ means email in Swahili & the intention of this project is to create a Simple Email Gateway that is
+extensible, scalable & reliable to handle sending of emails in a platform. This can be included as part of a
+notification system platform to handle integration with 3rd Party email providers or deployed as its own offering.
+
+Underneath there are already integrations with email providers, but these can be changed to accommodate others if need
+be.
+By default, SMTP is used to send out emails, but will default to a 3rd party email provider if this fails.
 
 ## Getting Started
 
