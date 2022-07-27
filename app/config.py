@@ -57,6 +57,7 @@ class Config(BaseSettings):
     sentry_dsn: str = ""
     sentry_enabled: bool = False
     sentry_traces_sample_rate: float = 0.5
+    sentry_debug_enabled: bool = False
 
     # security settings
     username: str = "barua-pepe-user"

@@ -11,7 +11,6 @@ from app.config import get_config
 from .exceptions import EmailSendingException
 from .smtp_proxy import SmtpServer
 from .sendgrid_email_service import SendGridEmailService
-from .email_service import EmailService
 
 
 @logger.catch
@@ -37,7 +36,6 @@ def send_plain_mail(
     :param list recipients: List of recipients of this email
     :param str subject: The subject of the email
     """
-    email_svc = EmailService
     if get_config().mail_smtp_enabled:
         email_svc = SmtpServer()
     else:

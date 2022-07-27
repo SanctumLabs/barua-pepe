@@ -28,7 +28,8 @@ class BaseTestCase(unittest.TestCase):
 
     @staticmethod
     def _get_settings_override():
-        return Config(environment="test", sentry_enabled=False, sentry_dsn="", mail_smtp_enabled=False)
+        return Config(environment="test", sentry_debug_enabled=False, sentry_enabled=False, sentry_dsn="",
+                      mail_smtp_enabled=False)
 
     def assert_status(self, status_code: int, actual: int):
         self.assertEqual(status_code, actual)
