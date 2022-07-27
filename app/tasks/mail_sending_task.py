@@ -6,7 +6,6 @@ from app.worker.celery_app import celery_app
 from app.logger import log
 from app.services.mail import send_plain_mail
 from .mail_error_task import mail_error_task
-from .exceptions import TaskException
 
 
 @celery_app.task(
@@ -39,10 +38,7 @@ def mail_sending_task(
     )
 
     try:
-        result = send_plain_mail(**data)
-        if not result:
-            raise TaskException(f"Mail sending task failed. Result: {result}")
-        return result
+        return send_plain_mail(**data)
     # pylint: disable=broad-except
     except Exception as exc:
         log.error(

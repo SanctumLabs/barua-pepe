@@ -11,6 +11,7 @@ better-exceptions = "*"
 pre-commit = "*"
 coverage = "*"
 black = "*"
+celery = {extras = ["pytest"], version = "*"}
 
 [packages]
 gunicorn = "*"
