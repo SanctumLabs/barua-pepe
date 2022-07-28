@@ -2,6 +2,7 @@
 DTO objects for mail endpoint
 """
 from typing import List
+
 # pylint: disable=no-name-in-module
 from pydantic import BaseModel, validator, Field
 from app.domain.entities.email_sender import EmailSender
@@ -29,6 +30,7 @@ class EmailRequestDto(BaseModel):
     """
     Email Request Payload
     """
+
     from_: EmailSenderDto = Field(alias="from")
     to: List[EmailRecipientDto]
     cc: List[EmailRecipientDto] | None
@@ -63,5 +65,6 @@ class EmailResponseDto(BaseModel):
     """
     Email Response Payload
     """
+
     status: int
     message: str

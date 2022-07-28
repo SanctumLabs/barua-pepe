@@ -10,6 +10,7 @@ class EmailSender(BaseModel):
     """
     Represents an Email Sender
     """
+
     email: EmailStr
     name: str
 

@@ -32,3 +32,6 @@ format:
 
 lint:
 	pylint app
+
+load-test:
+	locust --config .locust.conf

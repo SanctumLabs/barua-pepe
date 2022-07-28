@@ -59,7 +59,9 @@ def attach_exception_handlers(app: FastAPI):
 
     @app.exception_handler(RequestValidationError)
     # pylint: disable=unused-argument
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
         error_list = [_rewrite_error(e) for e in exc.errors()]
         errors = {}
         for error in error_list:

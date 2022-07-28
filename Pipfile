@@ -12,6 +12,7 @@ pre-commit = "*"
 coverage = "*"
 black = "*"
 celery = {extras = ["pytest"], version = "*"}
+locust = "*"
 
 [packages]
 gunicorn = "*"

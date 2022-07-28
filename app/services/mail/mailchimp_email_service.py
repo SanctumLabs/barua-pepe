@@ -34,7 +34,9 @@ class MailChimpEmailService(EmailService):
             log.info("Successfully setup mail service")
         except ApiClientError as error:
             log.error(f"Failed to configure mail service {error}")
-            raise ServiceIntegrationException("Failed to configure mail service") from error
+            raise ServiceIntegrationException(
+                "Failed to configure mail service"
+            ) from error
 
     # pylint: disable=too-many-arguments
     def send_email(
@@ -48,11 +50,17 @@ class MailChimpEmailService(EmailService):
         attachments: List[Dict[str, str]] | None,
     ):
 
-        recipients_to = self._setup_recipients(recipients=recipients, recipient_type="to")
+        recipients_to = self._setup_recipients(
+            recipients=recipients, recipient_type="to"
+        )
         recipients_to += self._setup_recipients(recipients=ccs, recipient_type="cc")
         recipients_to += self._setup_recipients(recipients=bcc, recipient_type="bcc")
 
-        mail = {"from_email": sender.get("email"), "subject": subject, "to": recipients_to}
+        mail = {
+            "from_email": sender.get("email"),
+            "subject": subject,
+            "to": recipients_to,
+        }
 
         if sender.get("name"):
             mail.update(dict(from_name=sender.get("name")))

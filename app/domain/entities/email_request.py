@@ -2,6 +2,7 @@
 Email Request
 """
 from typing import List
+
 # pylint: disable=no-name-in-module
 from pydantic import BaseModel, validator
 from .email_sender import EmailSender
@@ -14,6 +15,7 @@ class EmailRequest(BaseModel):
     """
     Represents an email Request
     """
+
     sender: EmailSender
     recipient: List[EmailRecipient]
     cc: List[EmailRecipient] | None

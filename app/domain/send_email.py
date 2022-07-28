@@ -12,7 +12,7 @@ def send_email(request: EmailRequest):
     data = dict(
         sender=request.sender.dict(),
         recipients=[recipient.dict() for recipient in request.recipient],
-        cc=[cc.dict() for cc in request.cc] if request.cc else [],
+        ccs=[cc.dict() for cc in request.cc] if request.cc else [],
         bcc=[bcc.dict() for bcc in request.bcc] if request.bcc else [],
         subject=request.subject,
         message=request.message,

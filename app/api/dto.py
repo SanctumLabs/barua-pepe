@@ -27,6 +27,7 @@ class ApiResponse(GenericModel, Generic[DataT]):
     """
     Represents a successful ApiResponse sent back to a client
     """
+
     status: int = 200
     data: Optional[DataT]
     message: Optional[str] = None
@@ -35,6 +36,7 @@ class ApiResponse(GenericModel, Generic[DataT]):
         """
         ApiResponse Config
         """
+
         schema_extra = {"example": {"status": 200}}
 
 
@@ -43,10 +45,12 @@ class BadRequest(ApiResponse):
     """
     Represents a BadRequest response
     """
+
     status: int = 400
 
     class Config:
         """
         BadRequest Config
         """
+
         schema_extra = {"example": {"status": 400, "message": "Invalid JSON"}}

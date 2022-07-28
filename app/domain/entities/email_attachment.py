@@ -10,6 +10,7 @@ class EmailAttachment(BaseModel):
     """
     Represents an Email Attachment
     """
+
     content: str
     filename: str
     # Mimetype of the attachment document

@@ -10,5 +10,6 @@ class EmailRecipient(BaseModel):
     """
     Represents an email Recipient
     """
+
     email: EmailStr
     name: str | None

@@ -18,7 +18,7 @@ def attach_middlewares(app: FastAPI):
             dsn=config.sentry_dsn,
             traces_sample_rate=config.sentry_traces_sample_rate,
             debug=config.sentry_debug_enabled,
-            environment=config.environment
+            environment=config.environment,
         )
 
         asgi_app = SentryAsgiMiddleware(app=app)
