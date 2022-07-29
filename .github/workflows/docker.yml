@@ -5,10 +5,9 @@ on:
   # Runs this workflow only after the Build Workflow has completed
   workflow_run:
     workflows:
-      - "Build"
+      - "Test"
     branches:
       - 'main'
-      - 'develop'
     types:
       - completed
 
