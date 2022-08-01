@@ -10,9 +10,17 @@ run:
 run-reload:
 	uvicorn app:app --port 5000 --reload
 
-# Runs the worker
-run-worker:
-	celery -A app.worker.celery_app worker --events -l info -n barua-pepe-worker@%n --concurrency=5
+# Runs Email worker
+run-email-worker:
+	celery -A app.worker.celery_app worker --events -l info -n barua-pepe-mailer-worker@%n --concurrency=5 -Q email-queue
+
+# Runs Email Error worker
+run-error-worker:
+	celery -A app.worker.celery_app worker --events -l info -n barua-pepe-dlt-worker@%n --concurrency=5 -Q email-error-queue
+
+# Runs Analytics worker
+run-analytics-worker:
+	celery -A app.worker.celery_app worker --events -l info -n barua-pepe-analytics-worker@%n --concurrency=5 -Q email-analytics-queue
 
 # Runs tests
 test:

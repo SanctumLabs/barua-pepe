@@ -30,10 +30,9 @@ class MailSendingTaskTestCases(unittest.TestCase):
             attachments=attachments,
         )
 
-        mail_sending_task(sender=sender, recipients=recipients, subject=subject, message=message, ccs=ccs, bcc=bcc,
-                          attachments=attachments)
+        mail_sending_task(data=data)
 
-        send_plain_mail_patch.assert_called_with(**data)
+        send_plain_mail_patch.assert_called_with(data)
 
     @unittest.skip("self.retry is not raising celery.exceptions.Retry exception. This needs to be investigated further")
     @patch("app.tasks.mail_sending_task.send_plain_mail")
@@ -66,8 +65,7 @@ class MailSendingTaskTestCases(unittest.TestCase):
         send_plain_mail_patch.assert_not_called()
 
         with raises(Retry):
-            mail_sending_task(sender=sender, recipients=recipients, subject=subject, message=message, ccs=ccs, bcc=bcc,
-                              attachments=attachments)
+            mail_sending_task(data=data)
 
 
 if __name__ == '__main__':

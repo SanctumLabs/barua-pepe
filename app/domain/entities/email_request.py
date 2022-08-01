@@ -17,9 +17,9 @@ class EmailRequest(BaseModel):
     """
 
     sender: EmailSender
-    recipient: List[EmailRecipient]
-    cc: List[EmailRecipient] | None
-    bcc: List[EmailRecipient] | None
+    recipients: List[EmailRecipient]
+    ccs: List[EmailRecipient] | None
+    bccs: List[EmailRecipient] | None
     subject: str
     message: str
     attachments: List[EmailAttachment] | None

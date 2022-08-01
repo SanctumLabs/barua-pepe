@@ -2,8 +2,8 @@
 Error Tasks
 """
 import os
-from typing import Dict, List
 from app.worker.celery_app import celery_app
+from app.domain.entities import EmailRequest
 from app.logger import log
 
 broker_host = os.environ.get("BROKER_HOST")
@@ -13,28 +13,23 @@ broker_password = os.environ.get("BROKER_PASSWORD")
 
 
 @celery_app.task(
-    bind=True, default_retry_delay=30, max_retries=3, name="mail_error_task"
+    bind=True,
+    default_retry_delay=30,
+    max_retries=3,
+    name="mail_error_task",
+    acks_late=True,
 )
 @log.catch
 # pylint: disable=too-many-arguments
 def mail_error_task(
     # pylint: disable=unused-argument
     self,
-    sender: Dict[str, str],
-    recipients: List[Dict[str, str]],
-    subject: str,
-    message: str,
-    carbon_copy: List[Dict[str, str]] | None = None,
-    bcc: List[Dict[str, str]] | None = None,
-    attachments: List[Dict[str, str]] | None = None,
+    data: EmailRequest,
 ):
     """
     Mail Error Task. This handles tasks that have failed to deliver messages
     """
-    log.info(
-        f"Received from_={sender}, to:{recipients}, cc:{carbon_copy}, subject:{subject}, bcc:{bcc}, message:{message}, "
-        f"attachments:{attachments}"
-    )
+    log.info(f"Received Data={data}")
 
 
 @celery_app.task(

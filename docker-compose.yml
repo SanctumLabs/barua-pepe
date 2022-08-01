@@ -6,10 +6,8 @@ services:
         container_name: barua-pepe-flower-dashboard
         hostname: flower
         environment:
-            - CELERY_BROKER_URL=amqp://
-#        command:
-#            - "--broker_api=http//guest:guest@queue:15672/api//"
-#            - "--broker=amqp://guest@queue:5672//"
+            CELERY_BROKER_URL: amqp://guest:guest@broker:5672//
+            CELERY_RESULT_BACKEND: redis://cache:6379
         ports:
             - "5555:5555"
 
@@ -45,5 +43,5 @@ services:
 
 
 volumes:
-  broker_data:
-  cache_data:
+    broker_data:
+    cache_data:

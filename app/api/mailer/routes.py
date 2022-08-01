@@ -33,10 +33,10 @@ async def send_plain_email(payload: EmailRequestDto, background_tasks: Backgroun
     try:
         data = dict(
             sender=payload.from_,
-            recipient=payload.to,
-            cc=payload.cc,
+            recipients=payload.to,
+            ccs=payload.cc,
             subject=payload.subject,
-            bcc=payload.bcc,
+            bccs=payload.bcc,
             message=payload.message,
             attachments=payload.attachments,
         )

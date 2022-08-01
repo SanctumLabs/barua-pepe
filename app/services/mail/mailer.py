@@ -5,52 +5,41 @@ Ensure that the correct environment variables have been set for the SMTP client 
 These env variables are imported and included in the config.py file under the Config class for these to be available in
 the current application context
 """
-from typing import List, Dict
 from app.logger import log as logger
 from app.config import get_config
+from app.domain.entities import EmailRequest
 from .exceptions import EmailSendingException
 from .smtp_proxy import SmtpServer
 from .sendgrid_email_service import SendGridEmailService
 
 
 @logger.catch
-# pylint: disable=too-many-arguments
-def send_plain_mail(
-    sender: Dict[str, str],
-    recipients: List[Dict[str, str]],
-    subject: str,
-    message: str,
-    ccs: List[Dict[str, str]] | None = None,
-    bcc: List[Dict[str, str]] | None = None,
-    attachments: List[Dict[str, str]] | None = None,
-):
+def send_plain_mail(request: EmailRequest):
     """
     Sends a plain text email to a list of recipients with optional Carbon Copies and Blind Carbon Copies. This includes
     an option for sending email attachments
-    :param dict sender: sender of email (Optional), will default to value set in MAIL_DEFAULT_SENDER config
-    This is a dictionary with the email and name key value pairs
-    :param list attachments: List of attachments to send in the email
-    :param list ccs: Carbon Copy recipients (Optional)
-    :param list bcc: Blind Carbon copy recipients (Optional)
-    :param str message: Message to send in body of email
-    :param list recipients: List of recipients of this email
-    :param str subject: The subject of the email
     """
+    logger.info(f"Sending email request {request}")
+
+    sender = request.get("sender")
+    recipients = request.get("recipients")
+    ccs = request.get("ccs", [])
+    bccs = request.get("bccs", [])
+    subject = request.get("subject")
+    message = request.get("message")
+    attachments = request.get("attachments", [])
+
     if get_config().mail_smtp_enabled:
         email_svc = SmtpServer()
     else:
         email_svc = SendGridEmailService()
-
-    logger.info(
-        f"Sending email message to {recipients}, cc: {ccs}, bcc:{bcc} from {sender}"
-    )
 
     try:
         response = email_svc.sendmail(
             sender=sender,
             recipients=recipients,
             ccs=ccs,
-            bcc=bcc,
+            bcc=bccs,
             subject=subject,
             message=message,
             attachments=attachments,
@@ -59,7 +48,7 @@ def send_plain_mail(
         return response
     # pylint: disable=broad-except
     except Exception as err:
-        # this should only happen if there is a fallback and we fail to send emails with the default setting
+        # this should only happen if there is a fallback, or we fail to send emails with the default setting
         # if in that event, then the application should try sending an email using a MAIL API
         logger.warning(
             f"Failed to send email with error {err}, using alternative to send email"
@@ -69,7 +58,7 @@ def send_plain_mail(
                 sender=sender,
                 recipients=recipients,
                 ccs=ccs,
-                bcc=bcc,
+                bcc=bccs,
                 subject=subject,
                 message=message,
                 attachments=attachments,

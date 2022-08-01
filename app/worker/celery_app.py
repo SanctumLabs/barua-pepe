@@ -14,9 +14,11 @@ from .constants import (
     EMAIL_ERROR_EXCHANGE,
     EMAIL_ERROR_ROUTING_KEY,
     EMAIL_ERROR_QUEUE_NAME,
-    # EMAIL_DEAD_LETTER_QUEUE_NAME,
     EMAIL_DEAD_LETTER_ROUTING_KEY,
     EMAIL_DEAD_LETTER_EXCHANGE,
+    EMAIL_ANALYTICS_EXCHANGE,
+    EMAIL_ANALYTICS_QUEUE_NAME,
+    EMAIL_ANALYTICS_ROUTING_KEY,
 )
 
 broker = os.environ.get("BROKER_URL", "amqp://")
@@ -27,9 +29,9 @@ celery_app = Celery(
     "BaruaPepeWorker", broker=broker, backend=result_backend, include=["app.tasks"]
 )
 
-default_exchange = Exchange(name=EMAIL_DEFAULT_EXCHANGE, type="direct")
 email_exchange = Exchange(name=EMAIL_EXCHANGE, type="direct")
 email_error_exchange = Exchange(name=EMAIL_ERROR_EXCHANGE, type="direct")
+email_analytics_exchange = Exchange(name=EMAIL_ANALYTICS_EXCHANGE, type="direct")
 email_dead_letter_exchange = Exchange(name=EMAIL_DEAD_LETTER_EXCHANGE, type="direct")
 
 dead_letter_queue_option = {
@@ -40,11 +42,6 @@ dead_letter_queue_option = {
 
 # Task Queues
 task_queues = (
-    Queue(
-        name=EMAIL_DEFAULT_QUEUE_NAME,
-        routing_key=EMAIL_DEFAULT_ROUTING_KEY,
-        exchange=default_exchange,
-    ),
     Queue(
         name=EMAIL_QUEUE_NAME,
         routing_key=EMAIL_ROUTING_KEY,
@@ -57,17 +54,23 @@ task_queues = (
         exchange=email_error_exchange,
         queue_arguments=dead_letter_queue_option,
     ),
-    # Queue(
-    #     name=EMAIL_DEAD_LETTER_QUEUE_NAME,
-    #     routing_key=EMAIL_DEAD_LETTER_ROUTING_KEY,
-    #     exchange=email_dead_letter_exchange
-    # ),
+    Queue(
+        name=EMAIL_ANALYTICS_QUEUE_NAME,
+        routing_key=EMAIL_ANALYTICS_ROUTING_KEY,
+        exchange=email_analytics_exchange,
+        queue_arguments=dead_letter_queue_option,
+    ),
 )
 
 # Task Routes
 task_routes = {
-    "mail_sending_task": dict(queue=EMAIL_QUEUE_NAME),
-    "mail_error_task": dict(queue=EMAIL_ERROR_QUEUE_NAME),
+    "mail_sending_task": dict(queue=EMAIL_QUEUE_NAME, routing_key=EMAIL_ROUTING_KEY),
+    "mail_error_task": dict(
+        queue=EMAIL_ERROR_QUEUE_NAME, routing_key=EMAIL_ERROR_ROUTING_KEY
+    ),
+    "mail_analytics_task": dict(
+        queue=EMAIL_ANALYTICS_QUEUE_NAME, routing_key=EMAIL_ANALYTICS_ROUTING_KEY
+    ),
 }
 
 result_backend_transport_options = {
