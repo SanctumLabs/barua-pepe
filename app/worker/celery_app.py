@@ -3,92 +3,73 @@ Celery application
 """
 import os
 from celery import Celery
-from kombu import Queue, Exchange
-from .constants import (
-    EMAIL_DEFAULT_EXCHANGE,
-    EMAIL_DEFAULT_QUEUE_NAME,
-    EMAIL_DEFAULT_ROUTING_KEY,
-    EMAIL_EXCHANGE,
-    EMAIL_QUEUE_NAME,
-    EMAIL_ROUTING_KEY,
-    EMAIL_ERROR_EXCHANGE,
-    EMAIL_ERROR_ROUTING_KEY,
-    EMAIL_ERROR_QUEUE_NAME,
-    EMAIL_DEAD_LETTER_ROUTING_KEY,
-    EMAIL_DEAD_LETTER_EXCHANGE,
-    EMAIL_ANALYTICS_EXCHANGE,
-    EMAIL_ANALYTICS_QUEUE_NAME,
-    EMAIL_ANALYTICS_ROUTING_KEY,
+from .queues import (
+    barua_queue,
+    barua_analytics_queue,
+    barua_error_queue,
+    BARUA_QUEUE_NAME,
+    BARUA_ROUTING_KEY_NAME,
+    BARUA_ERROR_QUEUE_NAME,
+    BARUA_ERROR_ROUTING_KEY_NAME,
+    BARUA_ANALYTICS_QUEUE_NAME,
+    BARUA_ANALYTICS_ROUTING_KEY_NAME,
+    BARUA_DEFAULT_EXCHANGE_NAME,
+    BARUA_DEFAULT_QUEUE_NAME,
+    BARUA_DEFAULT_ROUTING_KEY_NAME,
 )
 
-broker = os.environ.get("BROKER_URL", "amqp://")
-result_backend = os.environ.get("RESULT_BACKEND", "rpc://")
-result_backend_master = os.environ.get("RESULT_BACKEND_LEADER", "redismaster")
-
-celery_app = Celery(
-    "BaruaPepeWorker", broker=broker, backend=result_backend, include=["app.tasks"]
-)
-
-email_exchange = Exchange(name=EMAIL_EXCHANGE, type="direct")
-email_error_exchange = Exchange(name=EMAIL_ERROR_EXCHANGE, type="direct")
-email_analytics_exchange = Exchange(name=EMAIL_ANALYTICS_EXCHANGE, type="direct")
-email_dead_letter_exchange = Exchange(name=EMAIL_DEAD_LETTER_EXCHANGE, type="direct")
-
-dead_letter_queue_option = {
-    "x-message-ttl": 5000,  # delay until the message is transferred in milliseconds
-    "x-dead-letter-exchange": EMAIL_DEAD_LETTER_EXCHANGE,  # Exchange used to transfer the message from A to B.
-    "x-dead-letter-routing-key": EMAIL_DEAD_LETTER_ROUTING_KEY,  # Name of the queue we want the message transferred to.
-}
-
-# Task Queues
-task_queues = (
-    Queue(
-        name=EMAIL_QUEUE_NAME,
-        routing_key=EMAIL_ROUTING_KEY,
-        exchange=email_exchange,
-        queue_arguments=dead_letter_queue_option,
-    ),
-    Queue(
-        name=EMAIL_ERROR_QUEUE_NAME,
-        routing_key=EMAIL_ERROR_ROUTING_KEY,
-        exchange=email_error_exchange,
-        queue_arguments=dead_letter_queue_option,
-    ),
-    Queue(
-        name=EMAIL_ANALYTICS_QUEUE_NAME,
-        routing_key=EMAIL_ANALYTICS_ROUTING_KEY,
-        exchange=email_analytics_exchange,
-        queue_arguments=dead_letter_queue_option,
-    ),
-)
-
-# Task Routes
-task_routes = {
-    "mail_sending_task": dict(queue=EMAIL_QUEUE_NAME, routing_key=EMAIL_ROUTING_KEY),
-    "mail_error_task": dict(
-        queue=EMAIL_ERROR_QUEUE_NAME, routing_key=EMAIL_ERROR_ROUTING_KEY
-    ),
-    "mail_analytics_task": dict(
-        queue=EMAIL_ANALYTICS_QUEUE_NAME, routing_key=EMAIL_ANALYTICS_ROUTING_KEY
-    ),
-}
-
-result_backend_transport_options = {
-    "master_name": result_backend_master,
-    "retry_policy": {"timeout": 5.0},
-}
+broker_host = os.environ.get("BROKER_HOST", "amqp://")
+broker_port = os.environ.get("BROKER_PORT", "5672")
+broker_username = os.environ.get("BROKER_USER", "guest")
+broker_password = os.environ.get("BROKER_PASSWORD", "guest")
 
 broker_transport_options = {
     "visibility_timeout": 43200,
 }
 
+broker_url = f"amqp://{broker_username}:{broker_password}@{broker_host}:{broker_port}"
+
+backend_host = os.environ.get("RESULT_BACKEND_HOST", "localhost")
+backend_port = os.environ.get("RESULT_BACKEND_PORT", "6379")
+backend_username = os.environ.get("RESULT_BACKEND_USERNAME", "barua-pepe-user")
+backend_password = os.environ.get("RESULT_BACKEND_PASSWORD", "barua-pepe-password")
+backend_db = os.environ.get("RESULT_BACKEND_DB", "0")
+
+backend_url = f"redis://{backend_username}:{backend_password}@{backend_host}:{backend_port}/{backend_db}"
+
+backend_master = os.environ.get("RESULT_BACKEND_LEADER", "redismaster")
+backend_transport_options = {
+    "master_name": backend_master,
+    "retry_policy": {"timeout": 5.0},
+}
+
+# Task Queues
+task_queues = (barua_queue, barua_analytics_queue, barua_error_queue)
+
+# Task Routes
+task_routes = {
+    "mail_sending_task": dict(
+        queue=BARUA_QUEUE_NAME, routing_key=BARUA_ROUTING_KEY_NAME
+    ),
+    "mail_error_task": dict(
+        queue=BARUA_ERROR_QUEUE_NAME, routing_key=BARUA_ERROR_ROUTING_KEY_NAME
+    ),
+    "mail_analytics_task": dict(
+        queue=BARUA_ANALYTICS_QUEUE_NAME, routing_key=BARUA_ANALYTICS_ROUTING_KEY_NAME
+    ),
+}
+
+celery_app = Celery(
+    "BaruaPepeWorker", broker=broker_url, backend=backend_url, include=["app.tasks"]
+)
+
 # Set task routes and queues
 
 celery_app.conf.task_routes = task_routes
-celery_app.conf.task_default_exchange = EMAIL_DEFAULT_EXCHANGE
-celery_app.conf.task_default_routing_key = EMAIL_DEFAULT_ROUTING_KEY
-celery_app.conf.task_default_queue = EMAIL_DEFAULT_QUEUE_NAME
-celery_app.conf.result_backend_transport_options = result_backend_transport_options
+celery_app.conf.task_default_exchange = BARUA_DEFAULT_EXCHANGE_NAME
+celery_app.conf.task_default_routing_key = BARUA_DEFAULT_ROUTING_KEY_NAME
+celery_app.conf.task_default_queue = BARUA_DEFAULT_QUEUE_NAME
+celery_app.conf.backend_transport_options = backend_transport_options
 celery_app.conf.broker_transport_options = broker_transport_options
 celery_app.conf.task_queues = task_queues
 celery_app.conf.task_protocol = 1

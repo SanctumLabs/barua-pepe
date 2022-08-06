@@ -12,15 +12,15 @@ run-reload:
 
 # Runs Email worker
 run-email-worker:
-	celery -A app.worker.celery_app worker --events -l info -n barua-pepe-mailer-worker@%n --concurrency=5 -Q email-queue
+	celery -A app.worker.celery_app worker --events -l info -n barua-pepe-mailer-worker@%n --concurrency=5 -Q barua-queue
 
 # Runs Email Error worker
 run-error-worker:
-	celery -A app.worker.celery_app worker --events -l info -n barua-pepe-dlt-worker@%n --concurrency=5 -Q email-error-queue
+	celery -A app.worker.celery_app worker --events -l info -n barua-pepe-dlt-worker@%n --concurrency=5 -Q barua-error-queue
 
 # Runs Analytics worker
 run-analytics-worker:
-	celery -A app.worker.celery_app worker --events -l info -n barua-pepe-analytics-worker@%n --concurrency=5 -Q email-analytics-queue
+	celery -A app.worker.celery_app worker --events -l info -n barua-pepe-analytics-worker@%n --concurrency=5 -Q barua-analytics-queue
 
 # Runs tests
 test:
