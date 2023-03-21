@@ -1639,11 +1639,11 @@
         },
         "locust": {
             "hashes": [
-                "sha256:11deb7973cfe30a2703f7a93eda21eacafb4b1b4159924a0b5c1d0399d9ff21d",
-                "sha256:52b6c6c95d691225275f819a723f36ff2617c6ea0a8e3e1c83cc762367e3d103"
+                "sha256:9e0bb30b4962f9c9611174df0fdea2a4e3f41656b36dc7b0a1a46f618a83d5a9",
+                "sha256:a6307f3bf995c180f66e7caed94360b8c8ed95d64dca508614d803d5b0b39f15"
             ],
             "index": "pypi",
-            "version": "==2.15.0"
+            "version": "==2.15.1"
         },
         "markupsafe": {
             "hashes": [
