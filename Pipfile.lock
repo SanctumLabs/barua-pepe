@@ -240,12 +240,12 @@
                 "all"
             ],
             "hashes": [
-                "sha256:3d4729c038414d5193840706907a41839d839523da6ed0c2811f1168cac1798c",
-                "sha256:db84b470bd0e2b1075942231e90e3577e12a903c4dc8696f0d206a7904a7af1c"
+                "sha256:9908f2a5cc733004de6ca5e1412698f35085cefcbfd41d539245b9edf87b73c1",
+                "sha256:fee75aa1b1d3d73f79851c432497e4394e413e1dece6234f68d3ce250d12760a"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.8'",
-            "version": "==0.112.2"
+            "version": "==0.114.0"
         },
         "fastapi-cli": {
             "hashes": [
@@ -553,7 +553,6 @@
                 "sha256:1363c7d975c7036df0db2b4a61f2e062fbc0aa5ab5f2772e0ffc7191a4f4bce2",
                 "sha256:7aff4db5fdf3cf573d4b3c30926a510a10e19a0774d38fc4967f78beb6deb612"
             ],
-            "index": "pypi",
             "markers": "python_version >= '3.8'",
             "version": "==2.9.1"
         },
@@ -843,7 +842,7 @@
                 "sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d",
                 "sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8"
             ],
-            "markers": "python_version < '3.13'",
+            "markers": "python_version >= '3.8'",
             "version": "==4.12.2"
         },
         "tzdata": {
