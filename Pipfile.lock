@@ -455,12 +455,12 @@
         },
         "marshmallow": {
             "hashes": [
-                "sha256:bcaf2d6fd74fb1459f8450e85d994997ad3e70036452cbfa4ab685acb19479b3",
-                "sha256:c448ac6455ca4d794773f00bae22c2f351d62d739929f761dce5eacb5c468d7f"
+                "sha256:ddb5c9987017d37be351c184e4e867e7bf55f7331f4da730dedad6b7af662cdd",
+                "sha256:efdcb656ac8788f0e3d1d938f8dc0f237bf1a99aff8f6dfbffa594981641cea0"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.9'",
-            "version": "==3.23.2"
+            "version": "==3.24.1"
         },
         "mdurl": {
             "hashes": [
