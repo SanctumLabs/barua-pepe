@@ -2247,20 +2247,20 @@
         },
         "locust": {
             "hashes": [
-                "sha256:4ae1df1f5155cc7df5aa3eee333c1fa87c1a3ac4815a47f7e62d8cdeadc1fd45",
-                "sha256:e315a32503bb397cb696c27e2d35d591810a581714fed7a8c5514b36cc5c7958"
+                "sha256:89c79bc599aa57160bd41dd3876e35d8b9dee5abded78e35008d01fd8f1640ed",
+                "sha256:b826f95fbfd5d9a32df6ab1b74672b88e65bbc33ec99fdc10af98079952ad517"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.10'",
-            "version": "==2.37.10"
+            "version": "==2.37.11"
         },
         "locust-cloud": {
             "hashes": [
-                "sha256:11677895c6ed6d0beef1b425a6f04f10ea2cfcaeaefbf00a97fb3c9134296e54",
-                "sha256:a09161752b8c9a9205e97cef5223ee3ad967bc2d91c52d61952aaa3da6802a55"
+                "sha256:64a5e6f2bf0a1a012d9805291d44fb57e57535c2b5c0fa5bc87ba0d7cce9ef9c",
+                "sha256:a2656537ff367e6d4d4673477ba9e81ed73a8423a71573cd2512248740eded77"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==1.23.1"
+            "version": "==1.24.2"
         },
         "markupsafe": {
             "hashes": [
