@@ -1598,11 +1598,11 @@
         },
         "certifi": {
             "hashes": [
-                "sha256:2e0c7ce7cb5d8f8634ca55d2ba7e6ec2689a2fd6537d8dec1296a477a4910057",
-                "sha256:d747aa5a8b9bbbb1bb8c22bb13e22bd1f18e9796defa16bab421f7f7a317323b"
+                "sha256:6b31f564a415d79ee77df69d757bb49a5bb53bd9f756cbbe24394ffd6fc1f4b2",
+                "sha256:8ea99dbdfaaf2ba2f9bac77b9249ef62ec5218e7c2b2e903378ed5fccf765995"
             ],
             "markers": "python_version >= '3.7'",
-            "version": "==2025.6.15"
+            "version": "==2025.7.14"
         },
         "cfgv": {
             "hashes": [
@@ -2246,20 +2246,20 @@
         },
         "locust": {
             "hashes": [
-                "sha256:89c79bc599aa57160bd41dd3876e35d8b9dee5abded78e35008d01fd8f1640ed",
-                "sha256:b826f95fbfd5d9a32df6ab1b74672b88e65bbc33ec99fdc10af98079952ad517"
+                "sha256:7866567a3e38103fb5db096864701f99e9136617269c799158518ccbf1c98982",
+                "sha256:e62fb5230cc279c87114e180facf429f0717074b68e08e5a46226419e6674ee6"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.10'",
-            "version": "==2.37.11"
+            "version": "==2.37.12"
         },
         "locust-cloud": {
             "hashes": [
-                "sha256:64a5e6f2bf0a1a012d9805291d44fb57e57535c2b5c0fa5bc87ba0d7cce9ef9c",
-                "sha256:a2656537ff367e6d4d4673477ba9e81ed73a8423a71573cd2512248740eded77"
+                "sha256:7d59076e3248ac7f081d721fb900545519536f53fa0ad2b35ed91ba3138ced40",
+                "sha256:c4942896f9c29ac05505eb0635d919514decbfce68c0379bfc61d31f72ac29cd"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==1.24.2"
+            "version": "==1.26.0"
         },
         "markupsafe": {
             "hashes": [
@@ -2983,11 +2983,11 @@
         },
         "typing-extensions": {
             "hashes": [
-                "sha256:8676b788e32f02ab42d9e7c61324048ae4c6d844a399eebace3d4979d75ceef4",
-                "sha256:a1514509136dd0b477638fc68d6a91497af5076466ad0fa6c338e44e359944af"
+                "sha256:38b39f4aeeab64884ce9f74c94263ef78f3c22467c8724005483154c26648d36",
+                "sha256:d1e1e3b58374dc93031d6eda2420a48ea44a36c2b4766a4fdeb3710755731d76"
             ],
             "markers": "python_version >= '3.9'",
-            "version": "==4.14.0"
+            "version": "==4.14.1"
         },
         "tzdata": {
             "hashes": [
@@ -3142,11 +3142,11 @@
         },
         "zope.event": {
             "hashes": [
-                "sha256:2832e95014f4db26c47a13fdaef84cef2f4df37e66b59d8f1f4a8f319a632c26",
-                "sha256:bac440d8d9891b4068e2b5a2c5e2c9765a9df762944bda6955f96bb9b91e67cd"
+                "sha256:53de8f0e9f61dc0598141ac591f49b042b6d74784dab49971b9cc91d0f73a7df",
+                "sha256:a153660e0c228124655748e990396b9d8295d6e4f546fa1b34f3319e1c666e7f"
             ],
-            "markers": "python_version >= '3.7'",
-            "version": "==5.0"
+            "markers": "python_version >= '3.9'",
+            "version": "==5.1"
         },
         "zope.interface": {
             "hashes": [
