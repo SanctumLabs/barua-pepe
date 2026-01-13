@@ -617,10 +617,10 @@
         },
         "mailchimp-transactional": {
             "hashes": [
-                "sha256:2948a5e69e982adf441ed28c6350442fcbd6b78ee0faf39d55fd99340c85752b"
+                "sha256:693abc59140d0e4a8d23353d1b5cfb5edb882de317b6c885bdcd9755a08f35a1"
             ],
             "index": "pypi",
-            "version": "==1.1.3"
+            "version": "==1.2.0"
         },
         "markdown-it-py": {
             "hashes": [
@@ -1283,7 +1283,6 @@
                 "sha256:1b62b6884944a57dbe321509ab94fd4d3b307075e0c2eae991ac71ee15ad38ed",
                 "sha256:bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4"
             ],
-            "index": "pypi",
             "markers": "python_version >= '3.9'",
             "version": "==2.6.3"
         },
