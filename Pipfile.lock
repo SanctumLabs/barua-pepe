@@ -1000,12 +1000,12 @@
         },
         "python-multipart": {
             "hashes": [
-                "sha256:7a68db60c8bfb82e460637fa4750727b45af1d5e2ed215593f917f64694d34fe",
-                "sha256:efe91480f485f6a361427a541db4796f9e1591afc0fb8e7a4ba06bfbc6708996"
+                "sha256:2b2cd894c83d21bf49d702499531c7bafd057d730c201782048f7945d82de155",
+                "sha256:7340bef99a7e0032613f56dc36027b959fd3b30a787ed62d310e951f7c3a3a58"
             ],
             "index": "pypi",
-            "markers": "python_version >= '3.8'",
-            "version": "==0.0.18"
+            "markers": "python_version >= '3.10'",
+            "version": "==0.0.22"
         },
         "pyyaml": {
             "hashes": [
