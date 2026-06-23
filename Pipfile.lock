@@ -1250,11 +1250,11 @@
         },
         "tzlocal": {
             "hashes": [
-                "sha256:024d11221ff83453eae1f608f09b145b9779e1345d08c15404ce8ff7917cf629",
-                "sha256:41e1293f80d4b5ff38dff222601a8fbd06b4fdcaf25e224704047ad26a39af54"
+                "sha256:24ce97bb58e2a973f7640ec2553ab4e6f6d5a0d0d1aa9dc43bca21d89e1feb82",
+                "sha256:3a8c9bc18cf47e1dcde252ea0e6a72a6cde320a400b6ac6db1f1f8cccd553c00"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==5.4"
+            "version": "==5.4.3"
         },
         "ujson": {
             "hashes": [
