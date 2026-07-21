@@ -2784,12 +2784,12 @@
         },
         "locust": {
             "hashes": [
-                "sha256:9fa840a4ef8c2624d7719f6e642bce3e19079aa4eea755c99c5282087903e13a",
-                "sha256:a8b4d059296a38fa79432be60fb6904f70367e7d6fb824da64b744c45d8073ae"
+                "sha256:59629035d26cc70a1d8a94085cf71f115bb80785a1577931b44ed9999305713f",
+                "sha256:f5a90bb191d28f7e524bb52ddc702d84b2408a2c72e62dab6a9580f5bf5b0b3c"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.10'",
-            "version": "==2.45.0"
+            "version": "==2.46.0"
         },
         "locust-cloud": {
             "hashes": [
