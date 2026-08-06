@@ -44,7 +44,6 @@ def mail_sending_task(self, data: dict, request_id: str | None = None):
 
         try:
             from app.metrics import email_send_failures
-
             email_send_failures.inc()
         except Exception:
             pass
