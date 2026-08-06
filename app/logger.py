@@ -1,5 +1,8 @@
 """
-Logger configurations, this uses loguru to handle logs
+Logger configurations, this uses loguru to handle logs.
+This file now initializes optional Sentry integration and emits structured JSON logs
+when running outside the development environment so logs are easier to ingest by
+log aggregators.
 Reference: https://github.com/Delgan/loguru
 """
 
@@ -8,6 +11,28 @@ import sys
 import logging
 from loguru import logger as log
 import uvicorn.logging
+
+# Import configuration (contains sentry toggles)
+from app.config import get_config
+
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.logging import LoggingIntegration
+except Exception:
+    sentry_sdk = None
+
+config = get_config()
+
+# Initialize Sentry if enabled
+if getattr(config, "sentry_enabled", False) and getattr(config, "sentry_dsn", "") and sentry_sdk:
+    sentry_logging = LoggingIntegration(level=logging.INFO, event_level=logging.ERROR)
+    sentry_sdk.init(
+        dsn=config.sentry_dsn,
+        integrations=[sentry_logging],
+        traces_sample_rate=getattr(config, "sentry_traces_sample_rate", 0.0),
+        debug=getattr(config, "sentry_debug_enabled", False),
+    )
+
 
 logging.root.setLevel(logging.INFO)
 console_formatter = uvicorn.logging.ColourizedFormatter(
@@ -20,9 +45,8 @@ for handler in root.handlers:
 
 def configure_log_sink(log_type: str):
     """
-    Configures log sing based on the log type and the enrironment
-    @param log_type log type could be either info, error, warn, debug, etc
-    @returns the log sink to use
+    Configures log sink based on the log type and the environment
+    Returns either a file path (development) or stdout (production/containerized)
     """
     return (
         f"logs/{log_type}.log" if os.environ.get("ENV") == "development" else sys.stdout
@@ -34,68 +58,40 @@ def backtrace() -> bool:
     return os.environ.get("ENV", "development") == "development"
 
 
-# info log configurations
-log.add(
-    sink=configure_log_sink("info"),
-    backtrace=backtrace(),
-    colorize=True,
-    format="<green>{time}</green> <level>{message}</level>",
-    # format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
-    enqueue=True,
-    level="INFO",
-)
+is_dev = os.environ.get("ENV", "development") == "development"
 
-# error logs
-log.add(
-    sink=configure_log_sink("error"),
-    backtrace=backtrace(),
-    colorize=True,
-    format="<green>{time}</green> <level>{message}</level>",
-    # format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
-    enqueue=True,
-    level="ERROR",
-)
 
-# debug logs
-log.add(
-    sink=configure_log_sink("debug"),
-    backtrace=backtrace(),
-    colorize=True,
-    format="<green>{time}</green> <level>{message}</level>",
-    # format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
-    enqueue=True,
-    level="DEBUG",
-)
+# Add sinks per level. When running non-development and writing to stdout we emit JSON
+# by enabling loguru's `serialize=True` so logs are structured for aggregators.
+for level, lvl_name in [
+    ("INFO", "info"),
+    ("ERROR", "error"),
+    ("DEBUG", "debug"),
+    ("WARNING", "warn"),
+    ("CRITICAL", "critical"),
+    ("TRACE", "trace"),
+]:
+    sink = configure_log_sink(lvl_name)
+    # serialize only when sink is stdout in non-dev environments
+    serialize = (not is_dev) and (sink is sys.stdout)
+    colorize = is_dev
+    fmt = (
+        "<green>{time}</green> <level>{message}</level>"
+        if is_dev and not serialize
+        else "{\"time\": \"{time}\", \"level\": \"{level}\", \"message\": {message!r}, \"module\": \"{module}\", \"extra\": {extra} }"
+    )
 
-# warning logs
-log.add(
-    sink=configure_log_sink("warn"),
-    backtrace=backtrace(),
-    colorize=True,
-    format="<green>{time}</green> <level>{message}</level>",
-    # format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
-    enqueue=True,
-    level="WARNING",
-)
+    log.add(
+        sink=sink,
+        backtrace=backtrace(),
+        colorize=colorize,
+        format=fmt,
+        enqueue=True,
+        level=level,
+        serialize=serialize,
+    )
 
-# critical logs
-log.add(
-    sink=configure_log_sink("critical"),
-    backtrace=backtrace(),
-    colorize=True,
-    format="<green>{time}</green> <level>{message}</level>",
-    # format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
-    enqueue=True,
-    level="CRITICAL",
-)
-
-# trace logs
-log.add(
-    sink=configure_log_sink("trace"),
-    backtrace=backtrace(),
-    colorize=True,
-    format="<green>{time}</green> <level>{message}</level>",
-    # format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}",
-    enqueue=True,
-    level="TRACE",
-)
+# Provide a convenience wrapper to log structured events with extra context
+def bind_request_context(**kwargs):
+    """Bind contextual fields (request_id, user, etc.) to future log calls."""
+    return log.bind(**kwargs)
