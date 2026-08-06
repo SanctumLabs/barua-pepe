@@ -1,0 +1,96 @@
+{
+  "rabbit_version": "3.7.9",
+  "users": [],
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "permissions": [],
+  "parameters": [],
+  "policies": [],
+  "queues": [
+    {
+      "name": "barua-queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "barua-error-exchange",
+        "x-dead-letter-routing-key": "barua-error-routing-key"
+      }
+    },
+    {
+      "name": "barua-error-queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "barua-analytics-queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "barua-error-exchange",
+        "x-dead-letter-routing-key": "barua-error-routing-key"
+      }
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "barua-exchange",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "barua-error-exchange",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "barua-analytics-exchange",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "barua-exchange",
+      "vhost": "/",
+      "destination": "barua-queue",
+      "destination_type": "queue",
+      "routing_key": "barua-routing-key",
+      "arguments": {}
+    },
+    {
+      "source": "barua-error-exchange",
+      "vhost": "/",
+      "destination": "barua-error-queue",
+      "destination_type": "queue",
+      "routing_key": "barua-error-routing-key",
+      "arguments": {}
+    },
+    {
+      "source": "barua-analytics-exchange",
+      "vhost": "/",
+      "destination": "barua-analytics-queue",
+      "destination_type": "queue",
+      "routing_key": "barua-analytics-routing-key",
+      "arguments": {}
+    }
+  ]
+}
