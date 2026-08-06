@@ -72,4 +72,18 @@ celery_app.conf.task_default_queue = BARUA_DEFAULT_QUEUE_NAME
 celery_app.conf.backend_transport_options = backend_transport_options
 celery_app.conf.broker_transport_options = broker_transport_options
 celery_app.conf.task_queues = task_queues
+# Reliability and retrying defaults
 celery_app.conf.task_protocol = 1
+# Acknowledge tasks after the worker has executed them so they are re-queued on worker failure
+celery_app.conf.task_acks_late = True
+# Ensure tasks are rejected if the worker is lost
+celery_app.conf.worker_disable_rate_limits = False
+celery_app.conf.task_reject_on_worker_lost = True
+# Default retry delay (seconds) if a task does not override it
+celery_app.conf.task_default_retry_delay = 30
+# Optionally declare annotations for specific tasks (can be augmented later)
+celery_app.conf.task_annotations = {
+    "mail_sending_task": {"rate_limit": "10/s"},
+    "mail_error_task": {"rate_limit": "2/s"},
+}
+
