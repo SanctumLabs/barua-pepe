@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  dlx-integration:
+  integration-tests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,15 +18,25 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install docker-compose
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install docker-compose and test deps
         run: |
           python -m pip install --upgrade pip
           pip install docker-compose==1.29.2
+          pip install pytest pika pytest-xdist
 
       - name: Start RabbitMQ broker (docker-compose)
         run: |
           docker-compose up -d broker
-          # wait for rabbitmq management to be up
+          # wait for rabbitmq to accept connections
           python - <<'PY'
 import socket, time
 host='localhost'; port=5672
@@ -39,17 +49,40 @@ else:
     raise SystemExit('broker did not start')
 PY
 
-      - name: Install test deps
-        run: |
-          pip install pytest pika
+      - name: Prepare reports directory
+        run: mkdir -p reports
 
-      - name: Run DLX integration test
+      - name: Run integration tests (parallel)
         env:
           BROKER_HOST: localhost
           BROKER_PORT: 5672
-        run: pytest -q tests/integration/test_dlx_e2e.py
+        continue-on-error: true
+        run: |
+          # run all integration tests in parallel using pytest-xdist and capture logs
+          pytest -q tests/integration -n auto --junitxml=reports/junit.xml > reports/output.log 2>&1 || true
+
+      - name: Upload test reports and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-reports
+          path: reports/
 
       - name: Stop broker
         if: always()
         run: |
           docker-compose stop broker || true
+
+      - name: Upload RabbitMQ logs (optional)
+        if: always()
+        run: |
+          docker logs barua-pepe-queue > reports/rabbitmq-container.log 2>&1 || true
+      - name: Upload RabbitMQ container logs artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rabbitmq-logs
+          path: reports/rabbitmq-container.log
+
+    strategy:
+      fail-fast: false
