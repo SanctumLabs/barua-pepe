@@ -1,0 +1,55 @@
+name: Integration tests (DLX)
+
+on:
+  push:
+    branches: [ main, '**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  dlx-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install docker-compose
+        run: |
+          python -m pip install --upgrade pip
+          pip install docker-compose==1.29.2
+
+      - name: Start RabbitMQ broker (docker-compose)
+        run: |
+          docker-compose up -d broker
+          # wait for rabbitmq management to be up
+          python - <<'PY'
+import socket, time
+host='localhost'; port=5672
+for _ in range(60):
+    try:
+        s=socket.create_connection((host,port),2); s.close(); print('broker up'); break
+    except Exception:
+        time.sleep(1)
+else:
+    raise SystemExit('broker did not start')
+PY
+
+      - name: Install test deps
+        run: |
+          pip install pytest pika
+
+      - name: Run DLX integration test
+        env:
+          BROKER_HOST: localhost
+          BROKER_PORT: 5672
+        run: pytest -q tests/integration/test_dlx_e2e.py
+
+      - name: Stop broker
+        if: always()
+        run: |
+          docker-compose stop broker || true
