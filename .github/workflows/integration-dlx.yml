@@ -29,8 +29,17 @@ jobs:
       - name: Install test deps
         run: |
           python -m pip install --upgrade pip
+<<<<<<< HEAD
           pip install pytest pika pytest-xdist celery[redis] redis
+||||||| parent of eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
+          pip install docker-compose==1.29.2
+          pip install pytest pika pytest-xdist
+=======
+          pip install docker-compose==1.29.2
+          pip install pytest pika pytest-xdist celery[redis] redis
+>>>>>>> eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
 
+<<<<<<< HEAD
       - name: Start RabbitMQ and Redis (docker compose via action)
         uses: docker/compose-action@v2
         with:
@@ -38,7 +47,20 @@ jobs:
           args: up -d broker cache smtp
 
       - name: Wait for RabbitMQ
+||||||| parent of eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
+      - name: Start RabbitMQ broker (docker-compose)
+=======
+      - name: Start RabbitMQ and Redis (docker-compose)
+>>>>>>> eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
         run: |
+<<<<<<< HEAD
+||||||| parent of eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
+          docker-compose up -d broker
+          # wait for rabbitmq to accept connections
+=======
+          docker-compose up -d broker cache smtp
+          # wait for rabbitmq to accept connections
+>>>>>>> eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
           python - <<'PY'
 import socket, time
 host='localhost'; port=5672
@@ -79,10 +101,18 @@ PY
 
       - name: Stop services
         if: always()
+<<<<<<< HEAD
         uses: docker/compose-action@v2
         with:
           files: docker-compose.yml
           args: down --remove-orphans || true
+||||||| parent of eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
+        run: |
+          docker-compose stop broker || true
+=======
+        run: |
+          docker-compose stop broker cache smtp || true
+>>>>>>> eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
 
       - name: Upload RabbitMQ logs (optional)
         if: always()
