@@ -32,6 +32,13 @@ def mail_error_task(
     bound_log = log.bind(request_id=request_id, celery_task_id=getattr(self.request, 'id', None))
     bound_log.info(f"Received failed message for inspection", data=data)
 
+    try:
+        from app.metrics import email_error_tasks
+
+        email_error_tasks.inc()
+    except Exception:
+        pass
+
 
 @celery_app.task(
     bind=True, default_retry_delay=30, max_retries=2, name="mail_error_callback_task"
