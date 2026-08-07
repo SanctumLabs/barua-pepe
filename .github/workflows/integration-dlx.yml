@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
@@ -18,7 +18,7 @@ jobs:
           python-version: '3.10'
 
       - name: Cache pip
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cache/pip
@@ -83,6 +83,101 @@ PY
         with:
           files: docker-compose.yml
           args: down --remove-orphans || true
+
+      - name: Upload RabbitMQ logs (optional)
+        if: always()
+        run: |
+          docker logs barua-pepe-queue > reports/rabbitmq-container.log 2>&1 || true
+      - name: Upload RabbitMQ container logs artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rabbitmq-logs
+          path: reports/rabbitmq-container.log
+
+    strategy:
+      fail-fast: false
+
+name: Integration tests (DLX)
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install docker-compose==1.29.2
+          pip install pytest pika pytest-xdist celery[redis] redis
+
+      - name: Start RabbitMQ and Redis (docker-compose)
+        run: |
+          docker-compose up -d broker cache smtp
+          # wait for rabbitmq to accept connections
+          python - <<'PY'
+import socket, time
+host='localhost'; port=5672
+for _ in range(60):
+    try:
+        s=socket.create_connection((host,port),2); s.close(); print('broker up'); break
+    except Exception:
+        time.sleep(1)
+else:
+    raise SystemExit('broker did not start')
+PY
+
+      - name: Start local Celery worker
+        run: |
+          # start celery worker in background to process tasks during integration tests
+          nohup celery -A app.worker.celery_app worker -l info -n ci-worker@%n --concurrency=1 > reports/celery.log 2>&1 &
+          sleep 3
+
+      - name: Prepare reports directory
+        run: mkdir -p reports
+
+      - name: Run integration tests (parallel)
+        env:
+          BROKER_HOST: localhost
+          BROKER_PORT: 5672
+        continue-on-error: true
+        run: |
+          # run all integration tests in parallel using pytest-xdist and capture logs
+          pytest -q tests/integration -n auto --junitxml=reports/junit.xml > reports/output.log 2>&1 || true
+
+      - name: Upload test reports and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-reports
+          path: reports/
+          retention-days: 7
+
+      - name: Stop services
+        if: always()
+        run: |
+          docker-compose stop broker cache smtp || true
 
       - name: Upload RabbitMQ logs (optional)
         if: always()
