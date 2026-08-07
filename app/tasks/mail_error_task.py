@@ -30,7 +30,28 @@ def mail_error_task(
     Mail Error Task. This handles tasks that have failed to deliver messages
     """
     bound_log = log.bind(request_id=request_id, celery_task_id=getattr(self.request, 'id', None))
-    bound_log.info(f"Received failed message for inspection", data=data)
+    bound_log.info("Received failed message for inspection", data=data)
+
+    try:
+        from app.metrics import email_error_tasks
+
+        email_error_tasks.inc()
+    except Exception:
+        pass
+
+    try:
+        from app.metrics import email_error_tasks
+
+        email_error_tasks.inc()
+    except Exception:
+        pass
+
+    try:
+        from app.metrics import email_error_tasks
+
+        email_error_tasks.inc()
+    except Exception:
+        pass
 
     try:
         from app.metrics import email_error_tasks
