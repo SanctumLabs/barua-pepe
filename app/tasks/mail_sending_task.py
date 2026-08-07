@@ -25,12 +25,29 @@ def mail_sending_task(self, data: dict, request_id: str | None = None):
     bound_log = log.bind(request_id=request_id, celery_task_id=getattr(self.request, 'id', None))
     try:
         bound_log.info("Processing mail_sending_task")
-        return send_plain_mail(data)
+        from app.metrics import email_send_attempts, email_send_failures
+
+        # count attempt
+        try:
+            email_send_attempts.inc()
+        except Exception:
+            pass
+
+        result = send_plain_mail(data)
+
+        return result
     # pylint: disable=broad-except
     except Exception as exc:
         bound_log.error(
             f"Error sending email with error {exc}. Attempt {self.request.retries}/{self.max_retries} ..."
         )
+
+        try:
+            from app.metrics import email_send_failures
+
+            email_send_failures.inc()
+        except Exception:
+            pass
 
         if self.request.retries == self.max_retries:
             bound_log.warning("Maximum attempts reached, pushing to dlt queue...")
