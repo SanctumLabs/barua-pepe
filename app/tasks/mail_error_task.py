@@ -3,7 +3,6 @@ Error Tasks
 """
 import os
 from app.worker.celery_app import celery_app
-from app.domain.entities import EmailRequest
 from app.logger import log
 
 broker_host = os.environ.get("BROKER_HOST")
@@ -24,12 +23,35 @@ broker_password = os.environ.get("BROKER_PASSWORD")
 def mail_error_task(
     # pylint: disable=unused-argument
     self,
-    data: EmailRequest,
+    data: dict,
+    request_id: str | None = None,
 ):
     """
     Mail Error Task. This handles tasks that have failed to deliver messages
     """
-    log.info(f"Received Data={data}")
+    bound_log = log.bind(request_id=request_id, celery_task_id=getattr(self.request, 'id', None))
+    bound_log.info("Received failed message for inspection", data=data)
+
+    try:
+        from app.metrics import email_error_tasks
+
+        email_error_tasks.inc()
+    except Exception:
+        pass
+
+    try:
+        from app.metrics import email_error_tasks
+
+        email_error_tasks.inc()
+    except Exception:
+        pass
+
+    try:
+        from app.metrics import email_error_tasks
+
+        email_error_tasks.inc()
+    except Exception:
+        pass
 
 
 @celery_app.task(

@@ -15,6 +15,13 @@ async def on_startup():
     on startup hook, we place startup code here that the application needs during runtime
     """
     log.info("Starting Up")
+
+    # Validate production configuration early and fail fast when misconfigured
+    try:
+        config.validate_production_settings()
+    except Exception as exc:
+        log.error(f"Configuration validation failed: {exc}")
+        raise
     if config.mail_smtp_enabled:
         SmtpServer().login(username=config.mail_username, password=config.mail_password)
 
