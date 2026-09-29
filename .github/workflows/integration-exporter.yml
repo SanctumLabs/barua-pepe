@@ -1,0 +1,52 @@
+name: Integration — Celery Event Exporter
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install pipenv
+          pipenv lock -r --dev > requirements.txt
+          pip install -r requirements.txt
+
+      - name: Start infrastructure (RabbitMQ / Redis / SMTP)
+        run: |
+          docker compose up -d broker cache smtp
+
+      - name: Wait for RabbitMQ
+        run: |
+          for i in $(seq 1 30); do
+            nc -z broker 5672 && echo "broker ready" && break || sleep 1
+          done
+
+      - name: Start Celery worker
+        run: |
+          nohup celery -A app.worker.celery_app worker --events -l info -n gh-worker@%n --concurrency=1 &
+
+      - name: Run integration smoke (exporter)
+        run: |
+          python3 tests/integration/run_exporter_and_send_task.py
+
+      - name: Collect logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-logs
+          path: |
+            nohup.out
+            logs/*.log

@@ -8,6 +8,10 @@ from app.infra.handlers import attach_exception_handlers
 from app.infra.middleware import attach_middlewares
 from app.services.mail import SmtpServer
 from app.services.auth import get_current_auth
+from app.exporter import CeleryEventExporter
+
+# Initialize exporter (singleton)
+_exporter = CeleryEventExporter()
 
 
 async def on_startup():
@@ -18,12 +22,19 @@ async def on_startup():
     if config.mail_smtp_enabled:
         SmtpServer().login(username=config.mail_username, password=config.mail_password)
 
+    # Start Celery event exporter
+    _exporter.start()
+
 
 async def on_teardown():
     """
     Performs application cleanup if necessary
     """
     log.info("Shutting down")
+
+    # Stop Celery event exporter
+    _exporter.stop()
+
     if config.mail_smtp_enabled:
         SmtpServer().logout()
 
