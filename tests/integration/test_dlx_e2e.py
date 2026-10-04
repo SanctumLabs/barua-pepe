@@ -2,6 +2,7 @@ import os
 import time
 import json
 import subprocess
+from http.client import HTTPConnection
 
 import pika
 
@@ -81,16 +82,22 @@ def configure_broker_user(timeout=60.0):
 
 
 def wait_for_rabbitmq(timeout=60.0):
-    command = ["docker", "compose", "exec", "-T", "broker", "rabbitmqctl", "status"]
     deadline = time.time() + timeout
     last_error = ""
 
     while time.time() < deadline:
-        result = subprocess.run(command, capture_output=True, text=True, check=False)
-        if result.returncode == 0:
-            return
-
-        last_error = result.stderr or result.stdout
+        connection = HTTPConnection(BROKER_HOST, 15672, timeout=2)
+        try:
+            connection.request("GET", "/api/overview")
+            response = connection.getresponse()
+            response.read()
+            if response.status in (200, 401):
+                return
+            last_error = f"RabbitMQ management API returned HTTP {response.status}"
+        except OSError as error:
+            last_error = str(error)
+        finally:
+            connection.close()
         time.sleep(0.5)
 
     raise RuntimeError(f"RabbitMQ did not become ready: {last_error}")
