@@ -48,7 +48,7 @@ async def send_plain_email(payload: EmailRequestDto, background_tasks: Backgroun
         request_id = getattr(request.state, "request_id", None)
         # log context-aware info if middleware bound a logger
         bound_log = getattr(request.state, "log", logger)
-        bound_log.info("Enqueuing email send", email_subject=payload.subject, recipients=payload.to)
+        bound_log.info("Enqueuing email send", recipient_count=len(payload.to))
         background_tasks.add_task(send_email, email_request, request_id)
 
         return ApiResponse(
