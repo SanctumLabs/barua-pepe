@@ -1,7 +1,6 @@
 """Celery event stream consumer and Prometheus exporter."""
 
 import logging
-import socket
 import threading
 import time
 from typing import Dict, Optional
@@ -108,15 +107,12 @@ class CeleryEventExporter:
                     self._receiver = celery_app.events.Receiver(
                         connection, handlers={"*": self._handle_event}
                     )
+                    self._receiver.on_iteration = self._maybe_update_queue_depth
                     self._connected.set()
                     retry_delay = 1.0
                     if not self.running:
                         self._receiver.should_stop = True
-                    self._receiver.capture(
-                        limit=None, timeout=self.queue_depth_poll_interval, wakeup=True
-                    )
-                except socket.timeout:
-                    pass
+                    self._receiver.capture(limit=None, timeout=None, wakeup=True)
                 except (OperationalError, OSError, ChannelError) as error:
                     if self.running:
                         logger.error(

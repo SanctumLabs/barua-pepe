@@ -201,6 +201,30 @@ def test_event_consumer_retries_after_broker_connection_failure():
     assert not exporter._connected.is_set()
 
 
+def test_consumer_keeps_receiver_active_while_polling_queue_depth():
+    exporter = CeleryEventExporter(queue_depth_poll_interval=10)
+    connection = MagicMock()
+    receiver = MagicMock()
+    receiver.capture.side_effect = lambda **kwargs: setattr(exporter, "running", False)
+
+    with (
+        patch(
+            "app.exporter.celery_events_exporter.celery_app.connection",
+            return_value=connection,
+        ),
+        patch(
+            "app.exporter.celery_events_exporter.celery_app.events.Receiver",
+            return_value=receiver,
+        ),
+        patch.object(exporter, "_update_queue_depth"),
+    ):
+        exporter.running = True
+        exporter._event_consumer_loop()
+
+    assert receiver.on_iteration == exporter._maybe_update_queue_depth
+    receiver.capture.assert_called_once_with(limit=None, timeout=None, wakeup=True)
+
+
 def test_stop_signals_receiver_and_joins_thread():
     exporter = CeleryEventExporter()
     exporter.running = True
