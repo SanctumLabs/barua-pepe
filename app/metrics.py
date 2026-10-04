@@ -1,12 +1,58 @@
 """Prometheus metrics for Barua Pepe."""
 
-from prometheus_client import (
-    CONTENT_TYPE_LATEST,
-    Counter,
-    Gauge,
-    Histogram,
-    generate_latest,
-)
+try:
+    from prometheus_client import (
+        CONTENT_TYPE_LATEST,
+        Counter,
+        Gauge,
+        Histogram,
+        generate_latest,
+    )
+except ModuleNotFoundError as error:
+    if error.name != "prometheus_client":
+        raise
+
+    CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
+
+    class _NoOpMetric:
+        """Metric-compatible fallback used when Prometheus is not installed."""
+
+        def __init__(self, *_args, **_kwargs):
+            """Accept the same construction arguments as Prometheus metrics."""
+
+        def labels(self, *_args, **_kwargs):
+            """Return self to preserve the Prometheus label API."""
+            return self
+
+        def inc(self, _amount=1):
+            """Accept counter updates without recording them."""
+            return None
+
+        def observe(self, _amount):
+            """Accept observations without recording them."""
+            return None
+
+        def set(self, _value):
+            """Accept gauge updates without recording them."""
+            return None
+
+        def collect(self):
+            """Return no samples."""
+            return []
+
+    class Counter(_NoOpMetric):
+        """No-op fallback counter."""
+
+    class Gauge(_NoOpMetric):
+        """No-op fallback gauge."""
+
+    class Histogram(_NoOpMetric):
+        """No-op fallback histogram."""
+
+    def generate_latest():
+        """Return an empty Prometheus payload."""
+        return b""
+
 
 __all__ = [
     "CONTENT_TYPE_LATEST",
@@ -17,6 +63,7 @@ __all__ = [
     "generate_latest",
     "task_latency_seconds",
     "task_pending_count",
+    "task_queue_depth",
 ]
 
 
@@ -52,4 +99,10 @@ event_processing_latency_ms = Histogram(
 task_pending_count = Gauge(
     "barua_task_pending_count",
     "Number of task ids tracked from sent or started events through completion",
+)
+
+task_queue_depth = Gauge(
+    "barua_task_queue_depth",
+    "Number of ready messages in each configured Celery broker queue",
+    labelnames=["queue_name"],
 )
