@@ -66,18 +66,6 @@ jobs:
       - name: Prepare reports directory
         run: mkdir -p reports
 
-      - name: Start local Celery worker
-        run: |
-          # start celery worker in background to process tasks during integration tests
-          nohup celery -A app.worker.celery_app worker -l info -n ci-worker@%n --concurrency=1 > reports/celery.log 2>&1 &
-          sleep 3
-        env:
-          BROKER_HOST: localhost
-          BROKER_PORT: 5672
-          BROKER_USER: barua-dlx-test
-          BROKER_PASSWORD: barua-dlx-test-password
-          RESULT_BACKEND_HOST: localhost
-
       - name: Run integration tests (parallel)
         env:
           BROKER_HOST: localhost
