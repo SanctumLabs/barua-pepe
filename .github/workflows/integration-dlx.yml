@@ -34,11 +34,8 @@ jobs:
           pip install --no-deps -r requirements.txt
           pip install pytest-xdist
 
-      - name: Start RabbitMQ and Redis (docker compose via action)
-        uses: docker/compose-action@v2
-        with:
-          files: docker-compose.yml
-          args: up -d broker cache smtp
+      - name: Start RabbitMQ and Redis
+        run: docker compose up -d broker cache smtp
         env:
           RABBITMQ_DEFAULT_USER: barua-dlx-test
           RABBITMQ_DEFAULT_PASS: barua-dlx-test-password
@@ -101,10 +98,7 @@ jobs:
 
       - name: Stop services
         if: always()
-        uses: docker/compose-action@v2
-        with:
-          files: docker-compose.yml
-          args: down --remove-orphans || true
+        run: docker compose stop broker cache smtp
 
       - name: Upload RabbitMQ logs (optional)
         if: always()
