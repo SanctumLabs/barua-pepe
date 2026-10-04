@@ -46,11 +46,12 @@ barua_dead_letter_exchange = Exchange(
     name=BARUA_DEAD_LETTER_EXCHANGE_NAME, type="direct"
 )
 
+# Keep these arguments aligned with the deployed queue declaration. RabbitMQ treats
+# queue arguments as immutable; the dead-letter exchange binding routes to the sink.
 dead_letter_queue_option = {
     "x-message-ttl": 5000,  # delay until the message is transferred in milliseconds
-    "x-dead-letter-exchange": BARUA_DEAD_LETTER_EXCHANGE_NAME,  # Exchange used to transfer the message from A to B.
+    "x-dead-letter-exchange": BARUA_DEAD_LETTER_EXCHANGE_NAME,
     "x-dead-letter-routing-key": BARUA_DEAD_LETTER_ROUTING_KEY_NAME,
-    # Name of the queue we want the message transferred to.
 }
 
 barua_queue = Queue(
@@ -64,7 +65,6 @@ barua_error_queue = Queue(
     name=BARUA_ERROR_QUEUE_NAME,
     routing_key=BARUA_ERROR_ROUTING_KEY_NAME,
     exchange=barua_error_exchange,
-    queue_arguments=dead_letter_queue_option,
 )
 
 barua_analytics_queue = Queue(

@@ -28,17 +28,14 @@ jobs:
         run: pytest -q tests/exporter
 
       - name: Start infrastructure (RabbitMQ / Redis / SMTP)
-        run: |
-          docker compose up -d broker cache smtp
-        env:
-          RABBITMQ_DEFAULT_USER: exporter-test
-          RABBITMQ_DEFAULT_PASS: exporter-test-password
+        run: docker compose up -d broker cache smtp
 
       - name: Wait for RabbitMQ
         run: |
           for i in $(seq 1 60); do
-            if curl --fail --silent --user "$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS" \
-              --output /dev/null http://localhost:15672/api/overview; then
+            status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --max-time 2 http://localhost:15672/api/overview || true)
+            if [ "$status" = "200" ] || [ "$status" = "401" ]; then
               echo "RabbitMQ is ready"
               exit 0
             fi
@@ -46,9 +43,26 @@ jobs:
           done
           docker compose logs broker
           exit 1
+
+      - name: Configure RabbitMQ test account
+        run: |
+          ready=
+          for _ in $(seq 1 60); do
+            if docker compose exec -T broker rabbitmqctl add_user "$BROKER_USER" "$BROKER_PASSWORD"; then
+              ready=1
+              break
+            fi
+            if docker compose exec -T broker rabbitmqctl change_password "$BROKER_USER" "$BROKER_PASSWORD"; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = 1
+          docker compose exec -T broker rabbitmqctl set_permissions -p / "$BROKER_USER" ".*" ".*" ".*"
         env:
-          RABBITMQ_DEFAULT_USER: exporter-test
-          RABBITMQ_DEFAULT_PASS: exporter-test-password
+          BROKER_USER: exporter-test
+          BROKER_PASSWORD: exporter-test-password
 
       - name: Start Celery worker
         run: |

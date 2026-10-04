@@ -63,6 +63,37 @@ class Config(BaseSettings):
     username: str = "barua-pepe-user"
     password: str = "barua-pepe-password"
 
+    def validate_production_settings(self):
+        """Validate critical configuration that must be set when running in production.
+
+        Raises a RuntimeError when required production settings are missing or left as insecure defaults.
+        This is intentionally only enforced when environment == 'production' so local development is unaffected.
+        """
+        if self.environment != "production":
+            return
+
+        errors = []
+        # If SMTP is enabled, ensure credentials were changed from defaults
+        if self.mail_smtp_enabled:
+            default_username = self.mail_username in (
+                "baruapepe",
+                "barua-pepe",
+                "barua-pepe-user",
+            )
+            default_password = self.mail_password in (
+                "password",
+                "barua-pepe-password",
+            )
+            if default_username or default_password:
+                errors.append("SMTP credentials appear to be default/insecure")
+        else:
+            # If SMTP disabled, require a mail API token
+            if not self.mail_api_token:
+                errors.append("MAIL_API_TOKEN must be set when SMTP is disabled in production")
+
+        if errors:
+            raise RuntimeError("Invalid production configuration: " + "; ".join(errors))
+
 
 config = Config()
 

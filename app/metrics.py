@@ -86,7 +86,7 @@ task_latency_seconds = Histogram(
     "barua_task_latency_seconds",
     "Task execution duration in seconds reported by Celery events",
     labelnames=["task_name", "state"],
-    buckets=(0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0),  # typical email send times
+    buckets=(0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0),
 )
 
 event_processing_latency_ms = Histogram(
@@ -95,7 +95,6 @@ event_processing_latency_ms = Histogram(
     buckets=(1.0, 5.0, 10.0, 25.0, 50.0, 100.0),
 )
 
-# Gauge for task ids observed in the event stream
 task_pending_count = Gauge(
     "barua_task_pending_count",
     "Number of task ids tracked from sent or started events through completion",
