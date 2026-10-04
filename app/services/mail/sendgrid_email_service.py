@@ -42,7 +42,7 @@ class SendGridEmailService(EmailService):
         self.token = token
         self.mail_client = mail_client.SendGridAPIClient(api_key=token)
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def send_email(
         self,
         sender: EmailParticipant,
@@ -96,10 +96,10 @@ class SendGridEmailService(EmailService):
                     f"Sending email failed with status code: {status_code}"
                 )
             # pylint: disable=duplicate-code
-            return dict(
-                success=True,
-                message=f"Message from {sender} successfully sent to {recipients}",
-            )
+            return {
+                "success": True,
+                "message": f"Message from {sender} successfully sent to {recipients}",
+            }
         # pylint: disable=broad-except
         except Exception as err:
             log.error(f"Failed to send email {err}")

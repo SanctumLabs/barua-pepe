@@ -64,7 +64,7 @@ class SmtpServer:
             log.error(f"Failed to quite smtp server {err}")
             self.server.quit()
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def sendmail(
         self,
         sender: Dict[str, str],
@@ -118,10 +118,10 @@ class SmtpServer:
                 to_addrs=[email.get("email") for email in recipients],
                 msg=text,
             )
-            return dict(
-                success=True,
-                message=f"Message from {sender} successfully sent to {recipients}",
-            )
+            return {
+                "success": True,
+                "message": f"Message from {sender} successfully sent to {recipients}",
+            }
         # pylint: disable=broad-except
         except Exception as err:
             log.error(f"Failed to send email {err}")

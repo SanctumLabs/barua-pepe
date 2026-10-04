@@ -38,7 +38,7 @@ class MailChimpEmailService(EmailService):
                 "Failed to configure mail service"
             ) from error
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def send_email(
         self,
         sender: EmailParticipant,
@@ -63,25 +63,25 @@ class MailChimpEmailService(EmailService):
         }
 
         if sender.get("name"):
-            mail.update(dict(from_name=sender.get("name")))
+            mail.update({"from_name": sender.get("name")})
 
         if "<html" in message:
-            mail.update(dict(html=message))
+            mail.update({"html": message})
         else:
-            mail.update(dict(text=message))
+            mail.update({"text": message})
 
         if attachments:
-            mail.update(dict(attachments=attachments))
+            mail.update({"attachments": attachments})
 
         try:
-            response = self.mail_client.messages.send(dict(message=mail))
+            response = self.mail_client.messages.send({"message": mail})
             log.debug(
                 f"Message sent successfully from {sender} to {recipients}. Res: {response}"
             )
-            return dict(
-                success=True,
-                message=f"Message from {sender} successfully sent to {recipients}",
-            )
+            return {
+                "success": True,
+                "message": f"Message from {sender} successfully sent to {recipients}",
+            }
         except ApiClientError as err:
             log.error(f"Failed to send email {err}")
             raise ServiceIntegrationException(
@@ -99,7 +99,7 @@ class MailChimpEmailService(EmailService):
             recipient_info = {"email": recipient.get("email"), "type": recipient_type}
 
             if name:
-                recipient_info.update(dict(name=name))
+                recipient_info.update({"name": name})
 
             recipients_to.append(recipient_info)
         return recipients_to

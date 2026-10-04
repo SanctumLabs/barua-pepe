@@ -30,6 +30,6 @@ def mail_sending_task(self, data: EmailRequest):
 
         if self.request.retries == self.max_retries:
             log.warning("Maximum attempts reached, pushing to dlt queue...")
-            mail_error_task.apply_async(kwargs=dict(data=data.dict()))
+            mail_error_task.apply_async(kwargs={"data": data.dict()})
 
         raise self.retry(countdown=30 * 2, exc=exc, max_retries=3)

@@ -9,4 +9,4 @@ def send_email(data: EmailRequest):
     """
     Command to send out emails
     """
-    mail_sending_task.apply_async(kwargs=dict(data=data.dict()))
+    mail_sending_task.apply_async(kwargs={"data": data.dict()})

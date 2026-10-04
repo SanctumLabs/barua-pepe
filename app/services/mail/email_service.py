@@ -15,7 +15,7 @@ class EmailService(ABC):
         pass
 
     @abstractmethod
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def send_email(
         self,
         sender: Dict[str, str],
