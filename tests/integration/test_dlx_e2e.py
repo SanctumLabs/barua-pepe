@@ -2,13 +2,14 @@ import os
 import time
 import json
 import subprocess
-import socket
 
 import pika
 
 
 BROKER_HOST = os.environ.get("BROKER_HOST", "localhost")
 BROKER_PORT = int(os.environ.get("BROKER_PORT", "5672"))
+BROKER_USER = os.environ.get("BROKER_USER", "barua-dlx-test")
+BROKER_PASSWORD = os.environ.get("BROKER_PASSWORD", "barua-dlx-test-password")
 
 EXCHANGE = "barua-exchange"
 ROUTING_KEY = "barua-routing-key"
@@ -16,68 +17,130 @@ QUEUE = "barua-queue"
 ERROR_QUEUE = "barua-error-queue"
 
 
-def wait_for_port(host, port, timeout=30.0):
+def wait_for_broker(host, port, timeout=60.0):
     start = time.time()
     while time.time() - start < timeout:
         try:
-            with socket.create_connection((host, port), timeout=2):
-                return True
-        except OSError:
+            connection = pika.BlockingConnection(
+                pika.ConnectionParameters(
+                    host=host,
+                    port=port,
+                    credentials=pika.PlainCredentials(BROKER_USER, BROKER_PASSWORD),
+                    connection_attempts=1,
+                    socket_timeout=2,
+                )
+            )
+            connection.close()
+            return True
+        except pika.exceptions.AMQPConnectionError:
             time.sleep(0.5)
     return False
+
+
+def configure_broker_user(timeout=60.0):
+    base_command = ["docker", "compose", "exec", "-T", "broker", "rabbitmqctl"]
+    deadline = time.time() + timeout
+    last_error = ""
+
+    while time.time() < deadline:
+        result = subprocess.run(
+            [*base_command, "add_user", BROKER_USER, BROKER_PASSWORD],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            break
+
+        result = subprocess.run(
+            [*base_command, "change_password", BROKER_USER, BROKER_PASSWORD],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            break
+
+        last_error = result.stderr or result.stdout
+        time.sleep(0.5)
+    else:
+        raise RuntimeError(f"Could not configure RabbitMQ test user: {last_error}")
+
+    subprocess.check_call(
+        [
+            *base_command,
+            "set_permissions",
+            "-p",
+            "/",
+            BROKER_USER,
+            ".*",
+            ".*",
+            ".*",
+        ]
+    )
+
+
+def wait_for_rabbitmq(timeout=60.0):
+    command = ["docker", "compose", "exec", "-T", "broker", "rabbitmqctl", "status"]
+    deadline = time.time() + timeout
+    last_error = ""
+
+    while time.time() < deadline:
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
+        if result.returncode == 0:
+            return
+
+        last_error = result.stderr or result.stdout
+        time.sleep(0.5)
+
+    raise RuntimeError(f"RabbitMQ did not become ready: {last_error}")
 
 
 def test_dlx_end_to_end():
     """Bring up RabbitMQ via docker-compose, publish a message, reject it and assert it lands in the error queue.
 
-    Requirements: docker-compose must be available locally. This test will start the broker service using
-    `docker-compose up -d broker` and stop it at the end using `docker-compose stop broker`.
+    Requirements: Docker Compose v2 must be available locally. This test starts the broker service using
+    `docker compose up -d broker` and stops it at the end using `docker compose stop broker`.
     """
-    # start broker
-    subprocess.check_call(["docker-compose", "up", "-d", "broker"])  # may be noop if already running
+    broker_environment = os.environ.copy()
+    broker_environment["RABBITMQ_DEFAULT_USER"] = BROKER_USER
+    broker_environment["RABBITMQ_DEFAULT_PASS"] = BROKER_PASSWORD
+    subprocess.check_call(
+        ["docker", "compose", "up", "-d", "broker"],
+        env=broker_environment,
+    )
 
-    assert wait_for_port(BROKER_HOST, BROKER_PORT, timeout=30), "RabbitMQ did not become available"
-
-    params = pika.ConnectionParameters(host=BROKER_HOST, port=BROKER_PORT)
-
-    conn = pika.BlockingConnection(params)
-    ch = conn.channel()
-
-    # ensure exchanges/queues exist (definitions.json should have declared them, but declare idempotently)
-    ch.exchange_declare(exchange=EXCHANGE, exchange_type='direct', durable=True)
-    ch.queue_declare(queue=QUEUE, durable=True)
-    ch.queue_declare(queue=ERROR_QUEUE, durable=True)
-    ch.queue_bind(exchange=EXCHANGE, queue=QUEUE, routing_key=ROUTING_KEY)
-
-    payload = {"hello": "dlx-test"}
-    body = json.dumps(payload).encode()
-
-    # publish to the exchange so it lands on the primary queue
-    ch.basic_publish(exchange=EXCHANGE, routing_key=ROUTING_KEY, body=body)
-
-    # get the message from primary queue and reject it (nack without requeue)
-    method_frame, header_frame, received_body = ch.basic_get(queue=QUEUE, auto_ack=False)
-    assert method_frame is not None, "No message received from primary queue"
-
-    # reject the message (do not requeue) so it will be routed to DLX
-    ch.basic_reject(delivery_tag=method_frame.delivery_tag, requeue=False)
-
-    # allow a short moment for RabbitMQ to move the message to the DLX target
-    time.sleep(2)
-
-    # attempt to read from error queue
-    err_method, err_header, err_body = ch.basic_get(queue=ERROR_QUEUE, auto_ack=True)
-
-    # cleanup connection
-    conn.close()
-
-    # stop broker to clean up (best-effort)
+    conn = None
     try:
-        subprocess.check_call(["docker-compose", "stop", "broker"])
-    except Exception:
-        pass
+        wait_for_rabbitmq()
+        configure_broker_user()
+        assert wait_for_broker(BROKER_HOST, BROKER_PORT), "RabbitMQ did not become available"
+        params = pika.ConnectionParameters(
+            host=BROKER_HOST,
+            port=BROKER_PORT,
+            credentials=pika.PlainCredentials(BROKER_USER, BROKER_PASSWORD),
+        )
+        conn = pika.BlockingConnection(params)
+        ch = conn.channel()
 
-    assert err_method is not None, "Message did not arrive in error queue"
+        ch.exchange_declare(exchange=EXCHANGE, passive=True)
+        ch.queue_declare(queue=QUEUE, passive=True)
+        ch.queue_declare(queue=ERROR_QUEUE, passive=True)
 
-    parsed = json.loads(err_body.decode())
-    assert parsed == payload
+        payload = {"hello": "dlx-test"}
+        body = json.dumps(payload).encode()
+
+        ch.basic_publish(exchange=EXCHANGE, routing_key=ROUTING_KEY, body=body)
+        method_frame, _, _ = ch.basic_get(queue=QUEUE, auto_ack=False)
+        assert method_frame is not None, "No message received from primary queue"
+
+        ch.basic_reject(delivery_tag=method_frame.delivery_tag, requeue=False)
+        time.sleep(2)
+        err_method, _, err_body = ch.basic_get(queue=ERROR_QUEUE, auto_ack=True)
+
+        assert err_method is not None, "Message did not arrive in error queue"
+        assert json.loads(err_body.decode()) == payload
+    finally:
+        if conn is not None and conn.is_open:
+            conn.close()
+        subprocess.check_call(["docker", "compose", "stop", "broker"])

@@ -36,12 +36,12 @@ def test_send_email_forwards_request_id(monkeypatch):
 def test_mail_sending_task_forwards_request_id_to_error_task(monkeypatch):
     """When the send fails and retries are exhausted, mail_error_task.apply_async should be called with the original request_id."""
     # make send_plain_mail always raise
-    import app.services.mail as mail_svc_mod
+    import app.tasks.mail_sending_task as mail_task_mod
 
     def fake_send_plain_mail(data):
         raise Exception("simulated send failure")
 
-    monkeypatch.setattr(mail_svc_mod, 'send_plain_mail', fake_send_plain_mail)
+    monkeypatch.setattr(mail_task_mod, 'send_plain_mail', fake_send_plain_mail)
 
     # capture apply_async on error task
     import app.tasks.mail_error_task as error_mod
@@ -71,8 +71,7 @@ def test_mail_sending_task_forwards_request_id_to_error_task(monkeypatch):
     data = {'sender': {'email': 's@e.com', 'name': 'S'}, 'recipients': [{'email': 'r@e.com', 'name': 'R'}], 'subject': 'sub', 'message': 'msg'}
 
     with pytest.raises(RuntimeError):
-        # call the wrapped function implementation directly; the task is defined as a bound function
-        mail_sending_task.__wrapped__(DummySelf(), data, request_id='trace-xyz')
+        mail_sending_task.run.__func__(DummySelf(), data, request_id='trace-xyz')
 
     assert 'kwargs' in called, 'mail_error_task.apply_async was not called'
     assert called['kwargs'].get('request_id') == 'trace-xyz'

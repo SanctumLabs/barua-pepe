@@ -16,17 +16,21 @@ import uvicorn.logging
 from app.config import get_config
 
 try:
-    import sentry_sdk
+    import sentry_sdk as _sentry_sdk
     from sentry_sdk.integrations.logging import LoggingIntegration
-except Exception:
-    sentry_sdk = None
+except ImportError:
+    _sentry_sdk = None
 
 config = get_config()
 
 # Initialize Sentry if enabled
-if getattr(config, "sentry_enabled", False) and getattr(config, "sentry_dsn", "") and sentry_sdk:
+if (
+    getattr(config, "sentry_enabled", False)
+    and getattr(config, "sentry_dsn", "")
+    and _sentry_sdk
+):
     sentry_logging = LoggingIntegration(level=logging.INFO, event_level=logging.ERROR)
-    sentry_sdk.init(
+    _sentry_sdk.init(
         dsn=config.sentry_dsn,
         integrations=[sentry_logging],
         traces_sample_rate=getattr(config, "sentry_traces_sample_rate", 0.0),
@@ -78,7 +82,11 @@ for level, lvl_name in [
     fmt = (
         "<green>{time}</green> <level>{message}</level>"
         if is_dev and not serialize
-        else "{\"time\": \"{time}\", \"level\": \"{level}\", \"message\": {message!r}, \"module\": \"{module}\", \"extra\": {extra} }"
+        else (
+            "{\"time\": \"{time}\", \"level\": \"{level}\", "
+            "\"message\": {message!r}, \"module\": \"{module}\", "
+            "\"extra\": {extra} }"
+        )
     )
 
     log.add(

@@ -2,12 +2,13 @@
 This attaches middleware to the Application
 """
 import time
+import uuid
+
 from fastapi import Request, FastAPI
 import sentry_sdk
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from app.logger import log, bind_request_context
 from app.config import config
-import uuid
 
 
 def attach_middlewares(app: FastAPI):
@@ -36,7 +37,11 @@ def attach_middlewares(app: FastAPI):
         # store on request state for handlers to access
         request.state.request_id = request_id
         # create a bound logger that includes request_id and path/method
-        bound_logger = bind_request_context(request_id=request_id, path=str(request.url.path), method=request.method)
+        bound_logger = bind_request_context(
+            request_id=request_id,
+            path=str(request.url.path),
+            method=request.method,
+        )
         request.state.log = bound_logger
 
         start_time = time.time()

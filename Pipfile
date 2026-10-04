@@ -32,7 +32,6 @@ sentry-sdk = "*"
 httpx = "*"
 mailchimp-transactional = "*"
 sendgrid = "*"
-prometheus-client = "*"
 
 [requires]
 python_version = "3.10"

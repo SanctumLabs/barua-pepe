@@ -2,7 +2,7 @@ name: Integration tests (DLX)
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ develop, main ]
   workflow_dispatch: {}
 
 jobs:
@@ -29,45 +29,67 @@ jobs:
       - name: Install test deps
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pika pytest-xdist celery[redis] redis
+          pip install pipenv
+          pipenv requirements --dev > requirements.txt
+          pip install --no-deps -r requirements.txt
+          pip install pytest-xdist
 
       - name: Start RabbitMQ and Redis (docker compose via action)
         uses: docker/compose-action@v2
         with:
           files: docker-compose.yml
           args: up -d broker cache smtp
+        env:
+          RABBITMQ_DEFAULT_USER: barua-dlx-test
+          RABBITMQ_DEFAULT_PASS: barua-dlx-test-password
 
       - name: Wait for RabbitMQ
         run: |
-          python - <<'PY'
-import socket, time
-host='localhost'; port=5672
-for _ in range(60):
-    try:
-        s=socket.create_connection((host,port),2); s.close(); print('broker up'); break
-    except Exception:
-        time.sleep(1)
-else:
-    raise SystemExit('broker did not start')
-PY
+          for _ in $(seq 1 60); do
+            if docker compose exec -T broker rabbitmqctl status >/dev/null 2>&1; then
+              echo "RabbitMQ is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          docker compose logs broker
+          exit 1
+
+      - name: Configure RabbitMQ test account
+        run: |
+          docker compose exec -T broker rabbitmqctl add_user "$BROKER_USER" "$BROKER_PASSWORD" ||
+            docker compose exec -T broker rabbitmqctl change_password "$BROKER_USER" "$BROKER_PASSWORD"
+          docker compose exec -T broker rabbitmqctl set_permissions -p / "$BROKER_USER" ".*" ".*" ".*"
+        env:
+          BROKER_USER: barua-dlx-test
+          BROKER_PASSWORD: barua-dlx-test-password
+
+      - name: Prepare reports directory
+        run: mkdir -p reports
 
       - name: Start local Celery worker
         run: |
           # start celery worker in background to process tasks during integration tests
           nohup celery -A app.worker.celery_app worker -l info -n ci-worker@%n --concurrency=1 > reports/celery.log 2>&1 &
           sleep 3
-
-      - name: Prepare reports directory
-        run: mkdir -p reports
+        env:
+          BROKER_HOST: localhost
+          BROKER_PORT: 5672
+          BROKER_USER: barua-dlx-test
+          BROKER_PASSWORD: barua-dlx-test-password
+          RESULT_BACKEND_HOST: localhost
 
       - name: Run integration tests (parallel)
         env:
           BROKER_HOST: localhost
           BROKER_PORT: 5672
-        continue-on-error: true
+          BROKER_USER: barua-dlx-test
+          BROKER_PASSWORD: barua-dlx-test-password
+          RABBITMQ_DEFAULT_USER: barua-dlx-test
+          RABBITMQ_DEFAULT_PASS: barua-dlx-test-password
         run: |
           # run all integration tests in parallel using pytest-xdist and capture logs
-          pytest -q tests/integration -n auto --junitxml=reports/junit.xml > reports/output.log 2>&1 || true
+          pytest -q tests/integration -n auto --junitxml=reports/junit.xml > reports/output.log 2>&1
 
       - name: Upload test reports and logs
         if: always()
@@ -83,136 +105,6 @@ PY
         with:
           files: docker-compose.yml
           args: down --remove-orphans || true
-
-      - name: Upload RabbitMQ logs (optional)
-        if: always()
-        run: |
-          docker logs barua-pepe-queue > reports/rabbitmq-container.log 2>&1 || true
-      - name: Upload RabbitMQ container logs artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: rabbitmq-logs
-          path: reports/rabbitmq-container.log
-
-    strategy:
-      fail-fast: false
-
-name: Integration tests (DLX)
-
-on:
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch: {}
-
-jobs:
-  integration-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install test deps
-        run: |
-          python -m pip install --upgrade pip
-<<<<<<< HEAD
-          pip install pytest pika pytest-xdist celery[redis] redis
-||||||| parent of eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
-          pip install docker-compose==1.29.2
-          pip install pytest pika pytest-xdist
-=======
-          pip install docker-compose==1.29.2
-          pip install pytest pika pytest-xdist celery[redis] redis
->>>>>>> eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
-
-<<<<<<< HEAD
-      - name: Start RabbitMQ and Redis (docker compose via action)
-        uses: docker/compose-action@v2
-        with:
-          files: docker-compose.yml
-          args: up -d broker cache smtp
-
-      - name: Wait for RabbitMQ
-||||||| parent of eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
-      - name: Start RabbitMQ broker (docker-compose)
-=======
-      - name: Start RabbitMQ and Redis (docker-compose)
->>>>>>> eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
-        run: |
-<<<<<<< HEAD
-||||||| parent of eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
-          docker-compose up -d broker
-          # wait for rabbitmq to accept connections
-=======
-          docker-compose up -d broker cache smtp
-          # wait for rabbitmq to accept connections
->>>>>>> eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
-          python - <<'PY'
-import socket, time
-host='localhost'; port=5672
-for _ in range(60):
-    try:
-        s=socket.create_connection((host,port),2); s.close(); print('broker up'); break
-    except Exception:
-        time.sleep(1)
-else:
-    raise SystemExit('broker did not start')
-PY
-
-      - name: Start local Celery worker
-        run: |
-          # start celery worker in background to process tasks during integration tests
-          nohup celery -A app.worker.celery_app worker -l info -n ci-worker@%n --concurrency=1 > reports/celery.log 2>&1 &
-          sleep 3
-
-      - name: Prepare reports directory
-        run: mkdir -p reports
-
-      - name: Run integration tests (parallel)
-        env:
-          BROKER_HOST: localhost
-          BROKER_PORT: 5672
-        continue-on-error: true
-        run: |
-          # run all integration tests in parallel using pytest-xdist and capture logs
-          pytest -q tests/integration -n auto --junitxml=reports/junit.xml > reports/output.log 2>&1 || true
-
-      - name: Upload test reports and logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: integration-test-reports
-          path: reports/
-          retention-days: 7
-
-      - name: Stop services
-        if: always()
-<<<<<<< HEAD
-        uses: docker/compose-action@v2
-        with:
-          files: docker-compose.yml
-          args: down --remove-orphans || true
-||||||| parent of eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
-        run: |
-          docker-compose stop broker || true
-=======
-        run: |
-          docker-compose stop broker cache smtp || true
->>>>>>> eb59974 (ci(integration): run integration tests on PRs and via dispatch; start Redis and Celery worker; cache pip; upload artifacts with retention)
 
       - name: Upload RabbitMQ logs (optional)
         if: always()

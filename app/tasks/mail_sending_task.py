@@ -3,6 +3,7 @@ Mail sending tasks can be found here
 """
 from app.worker.celery_app import celery_app
 from app.logger import log
+from app.metrics import email_send_attempts, email_send_failures
 from app.services.mail import send_plain_mail
 from .mail_error_task import mail_error_task
 
@@ -14,7 +15,7 @@ from .mail_error_task import mail_error_task
     name="mail_sending_task",
     acks_late=True,
 )
-@log.catch
+@log.catch(reraise=True)
 def mail_sending_task(self, data: dict, request_id: str | None = None):
     """
     Worker task that handles sending email messages in the background
@@ -25,13 +26,7 @@ def mail_sending_task(self, data: dict, request_id: str | None = None):
     bound_log = log.bind(request_id=request_id, celery_task_id=getattr(self.request, 'id', None))
     try:
         bound_log.info("Processing mail_sending_task")
-        from app.metrics import email_send_attempts, email_send_failures
-
-        # count attempt
-        try:
-            email_send_attempts.inc()
-        except Exception:
-            pass
+        email_send_attempts.inc()
 
         result = send_plain_mail(data)
 
@@ -42,11 +37,7 @@ def mail_sending_task(self, data: dict, request_id: str | None = None):
             f"Error sending email with error {exc}. Attempt {self.request.retries}/{self.max_retries} ..."
         )
 
-        try:
-            from app.metrics import email_send_failures
-            email_send_failures.inc()
-        except Exception:
-            pass
+        email_send_failures.inc()
 
         if self.request.retries == self.max_retries:
             bound_log.warning("Maximum attempts reached, pushing to dlt queue...")

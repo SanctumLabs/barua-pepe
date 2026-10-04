@@ -4,6 +4,7 @@ Error Tasks
 import os
 from app.worker.celery_app import celery_app
 from app.logger import log
+from app.metrics import email_error_tasks
 
 broker_host = os.environ.get("BROKER_HOST")
 broker_port = os.environ.get("BROKER_PORT")
@@ -31,27 +32,7 @@ def mail_error_task(
     """
     bound_log = log.bind(request_id=request_id, celery_task_id=getattr(self.request, 'id', None))
     bound_log.info("Received failed message for inspection", data=data)
-
-    try:
-        from app.metrics import email_error_tasks
-
-        email_error_tasks.inc()
-    except Exception:
-        pass
-
-    try:
-        from app.metrics import email_error_tasks
-
-        email_error_tasks.inc()
-    except Exception:
-        pass
-
-    try:
-        from app.metrics import email_error_tasks
-
-        email_error_tasks.inc()
-    except Exception:
-        pass
+    email_error_tasks.inc()
 
 
 @celery_app.task(

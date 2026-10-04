@@ -75,7 +75,16 @@ class Config(BaseSettings):
         errors = []
         # If SMTP is enabled, ensure credentials were changed from defaults
         if self.mail_smtp_enabled:
-            if self.mail_username in ("baruapepe", "barua-pepe", "barua-pepe-user") or self.mail_password in ("password", "barua-pepe-password"):
+            default_username = self.mail_username in (
+                "baruapepe",
+                "barua-pepe",
+                "barua-pepe-user",
+            )
+            default_password = self.mail_password in (
+                "password",
+                "barua-pepe-password",
+            )
+            if default_username or default_password:
                 errors.append("SMTP credentials appear to be default/insecure")
         else:
             # If SMTP disabled, require a mail API token
