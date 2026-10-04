@@ -20,9 +20,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pipenv
-          pipenv lock -r --dev > requirements.txt
-          pip install -r requirements.txt
+          python -m pip install pipenv
+          pipenv requirements --dev > requirements.txt
+          pip install --no-deps -r requirements.txt
+
+      - name: Run exporter unit tests
+        run: pytest -q tests/exporter
 
       - name: Start infrastructure (RabbitMQ / Redis / SMTP)
         run: |
@@ -31,22 +34,37 @@ jobs:
       - name: Wait for RabbitMQ
         run: |
           for i in $(seq 1 30); do
-            nc -z broker 5672 && echo "broker ready" && break || sleep 1
+            if nc -z 127.0.0.1 5672; then
+              echo "RabbitMQ is ready"
+              exit 0
+            fi
+            sleep 1
           done
+          docker compose logs broker
+          exit 1
 
       - name: Start Celery worker
         run: |
-          nohup celery -A app.worker.celery_app worker --events -l info -n gh-worker@%n --concurrency=1 &
+          nohup celery -A app.worker.celery_app worker --events -l info -n gh-worker@%n --concurrency=1 --include tests.integration.exporter_smoke_task > celery-worker.log 2>&1 &
+        env:
+          BROKER_HOST: localhost
+          BROKER_PORT: 5672
+          RESULT_BACKEND_HOST: localhost
 
       - name: Run integration smoke (exporter)
         run: |
-          python3 tests/integration/run_exporter_and_send_task.py
+          python3 -m tests.integration.run_exporter_and_send_task
+        env:
+          BROKER_HOST: localhost
+          BROKER_PORT: 5672
+          RESULT_BACKEND_HOST: localhost
 
       - name: Collect logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: integration-logs
+          name: exporter-integration-logs
+          if-no-files-found: ignore
           path: |
-            nohup.out
+            celery-worker.log
             logs/*.log

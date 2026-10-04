@@ -48,15 +48,18 @@ task_queues = (barua_queue, barua_analytics_queue, barua_error_queue)
 
 # Task Routes
 task_routes = {
-    "mail_sending_task": dict(
-        queue=BARUA_QUEUE_NAME, routing_key=BARUA_ROUTING_KEY_NAME
-    ),
-    "mail_error_task": dict(
-        queue=BARUA_ERROR_QUEUE_NAME, routing_key=BARUA_ERROR_ROUTING_KEY_NAME
-    ),
-    "mail_analytics_task": dict(
-        queue=BARUA_ANALYTICS_QUEUE_NAME, routing_key=BARUA_ANALYTICS_ROUTING_KEY_NAME
-    ),
+    "mail_sending_task": {
+        "queue": BARUA_QUEUE_NAME,
+        "routing_key": BARUA_ROUTING_KEY_NAME,
+    },
+    "mail_error_task": {
+        "queue": BARUA_ERROR_QUEUE_NAME,
+        "routing_key": BARUA_ERROR_ROUTING_KEY_NAME,
+    },
+    "mail_analytics_task": {
+        "queue": BARUA_ANALYTICS_QUEUE_NAME,
+        "routing_key": BARUA_ANALYTICS_ROUTING_KEY_NAME,
+    },
 }
 
 celery_app = Celery(
@@ -73,3 +76,4 @@ celery_app.conf.backend_transport_options = backend_transport_options
 celery_app.conf.broker_transport_options = broker_transport_options
 celery_app.conf.task_queues = task_queues
 celery_app.conf.task_protocol = 1
+celery_app.conf.task_send_sent_event = True

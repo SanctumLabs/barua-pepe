@@ -22,6 +22,8 @@ requests = "*"
 marshmallow = "*"
 celery = {extras = ["redis"],version = "*"}
 pika = "*"
+prometheus-client = "*"
+pydantic-settings = "*"
 fastapi = {extras = ["all"], version = "*"}
 uvicorn = "*"
 pydantic = {extras = ["email"], version = "*"}

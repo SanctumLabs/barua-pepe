@@ -3,17 +3,16 @@
 import logging
 import threading
 import time
-from collections import defaultdict
-from queue import Queue, Empty
 from typing import Dict, Optional
 
-from app.logger import bind_request_context
+from kombu.exceptions import OperationalError
+
 from app.metrics import (
     task_latency_seconds,
-    task_queue_depth,
+    task_pending_count,
     event_processing_latency_ms,
 )
-from app.worker.celery_app import app as celery_app
+from app.worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -24,29 +23,33 @@ class CeleryEventExporter:
 
     Tracks:
     - Task execution latency (sent → succeeded/failed)
-    - Task queue depth (pending task count)
+    - Tracked tasks observed from sent/started through completion
     - Event processing latency
 
     Runs in a background thread to avoid blocking the main app.
     """
 
-    def __init__(self, max_queue_size: int = 10000):
-        self.max_queue_size = max_queue_size
-        self.event_queue: Queue = Queue(maxsize=max_queue_size)
+    def __init__(self, max_pending_tasks: int = 100000):
         self.running = False
         self.worker_thread: Optional[threading.Thread] = None
+        self._receiver = None
+        self._connected = threading.Event()
 
-        # Track task state for latency calculation: {task_id: {'sent_at': timestamp}}
-        self.pending_tasks: Dict[str, dict] = defaultdict(dict)
-        self.max_pending_tasks = 100000  # Memory safety limit
+        self.pending_tasks: Dict[str, dict] = {}
+        self.max_pending_tasks = max_pending_tasks
+
+    def wait_until_connected(self, timeout: float) -> bool:
+        """Wait for the event stream connection to become ready."""
+        return self._connected.wait(timeout)
 
     def start(self) -> None:
         """Start the event consumer thread."""
-        if self.running:
+        if self.worker_thread and self.worker_thread.is_alive():
             logger.warning("Event exporter already running")
             return
 
         self.running = True
+        self._connected.clear()
         self.worker_thread = threading.Thread(
             target=self._event_consumer_loop, daemon=True, name="celery-events-exporter"
         )
@@ -54,115 +57,112 @@ class CeleryEventExporter:
         logger.info("Celery event exporter started")
 
     def stop(self, timeout: int = 5) -> None:
-        """Stop the event consumer thread and drain pending events."""
+        """Stop the event consumer thread."""
         if not self.running:
             return
 
         self.running = False
-        # Drain queue before stopping to process final events
-        try:
-            while not self.event_queue.empty():
-                try:
-                    event = self.event_queue.get_nowait()
-                    self._process_event(event)
-                except Empty:
-                    break
-        except Exception as e:
-            logger.error("Error draining event queue", exc_info=e)
+        if self._receiver:
+            self._receiver.should_stop = True
 
         if self.worker_thread:
             self.worker_thread.join(timeout=timeout)
+            if self.worker_thread.is_alive():
+                logger.error("Celery event exporter did not stop within %s seconds", timeout)
+                return
             logger.info("Celery event exporter stopped")
 
     def _event_consumer_loop(self) -> None:
         """Main event consumer loop running in background thread."""
-        log = bind_request_context(logger, {"component": "celery-events-exporter"})
         connection = None
 
         try:
             connection = celery_app.connection()
             connection.connect()
-            log.info("Connected to Celery broker for event stream")
-
-            with connection.channel() as channel:
-                recv = celery_app.events.Receiver(
-                    connection, handlers={"*": self._handle_event}
-                )
-                recv.capture(limit=None, timeout=None, wakeup=True)
-                log.info("Listening for Celery task events")
-
-        except Exception as e:
-            log.error("Celery event stream error", exc_info=e, extra={"error": str(e)})
+            logger.info("Connected to Celery broker for event stream")
+            self._receiver = celery_app.events.Receiver(
+                connection, handlers={"*": self._handle_event}
+            )
+            self._connected.set()
+            if not self.running:
+                self._receiver.should_stop = True
+            logger.info("Listening for Celery task events")
+            self._receiver.capture(limit=None, wakeup=True)
+        except (OperationalError, OSError) as e:
+            logger.error("Celery event stream error: %s", e, exc_info=True)
         finally:
-            if connection:
+            self._receiver = None
+            self._connected.clear()
+            if connection and connection.connected:
                 connection.close()
-            log.info("Event consumer loop exited")
+            logger.info("Celery event consumer loop exited")
 
     def _handle_event(self, event: dict) -> None:
         """Handle incoming Celery event (called by event receiver)."""
         if self.running:
-            try:
-                self.event_queue.put_nowait(event)
-            except Exception:
-                # Queue full; drop oldest and retry (simple backpressure)
-                try:
-                    self.event_queue.get_nowait()
-                    self.event_queue.put_nowait(event)
-                except Exception:
-                    pass
+            self._process_event(event)
 
     def _process_event(self, event: dict) -> None:
         """Process a single event and update metrics."""
-        event_start = time.time()
+        event_start = time.perf_counter()
         try:
-            event_type = event.get("type", "")
             task_id = event.get("uuid", "")
-
-            if not task_id:
-                return
-
-            # Track task lifecycle
-            if event_type == "task-sent":
-                self.pending_tasks[task_id]["sent_at"] = event.get("timestamp", time.time())
-            elif event_type == "task-received":
-                if task_id in self.pending_tasks:
-                    self.pending_tasks[task_id]["received_at"] = event.get("timestamp", time.time())
-            elif event_type == "task-started":
-                if task_id in self.pending_tasks:
-                    self.pending_tasks[task_id]["started_at"] = event.get("timestamp", time.time())
-            elif event_type in ("task-succeeded", "task-failed"):
-                # Task completed; record latency
-                if task_id in self.pending_tasks:
-                    task_data = self.pending_tasks[task_id]
-                    sent_at = task_data.get("sent_at")
-                    if sent_at:
-                        latency = event.get("timestamp", time.time()) - sent_at
-                        # Record latency with task name and result type
-                        task_name = event.get("name", "unknown")
-                        labels = {
-                            "task_name": task_name,
-                            "state": "succeeded" if event_type == "task-succeeded" else "failed",
-                        }
-                        task_latency_seconds.labels(**labels).observe(max(0, latency))
-                    del self.pending_tasks[task_id]
-
-            # Update queue depth metric
-            task_queue_depth.set(len(self.pending_tasks))
-
-            # Memory safety: trim old pending tasks if dict grows too large
-            if len(self.pending_tasks) > self.max_pending_tasks:
-                # Remove tasks older than 1 hour (shouldn't normally happen)
-                cutoff_time = time.time() - 3600
-                old_tasks = [
-                    tid for tid, data in self.pending_tasks.items()
-                    if data.get("sent_at", float("inf")) < cutoff_time
-                ]
-                for tid in old_tasks:
-                    del self.pending_tasks[tid]
-
-        except Exception as e:
-            logger.error("Error processing event", exc_info=e, extra={"event_type": event.get("type")})
+            if task_id:
+                self._update_task_state(event, task_id)
+                self._trim_pending_tasks()
+        except (KeyError, TypeError, ValueError) as e:
+            logger.error("Error processing Celery event: %s", e, exc_info=True)
         finally:
-            # Record event processing latency
-            event_latency = (time.time() - event_start) * 1000  # milliseconds
+            task_pending_count.set(len(self.pending_tasks))
+            event_latency = (time.perf_counter() - event_start) * 1000
             event_processing_latency_ms.observe(max(0, event_latency))
+
+    def _update_task_state(self, event: dict, task_id: str) -> None:
+        """Update tracked state from one task lifecycle event."""
+        event_type = event.get("type", "")
+        if event_type in ("task-sent", "task-received"):
+            task_data = self.pending_tasks.setdefault(task_id, {})
+            timestamp_key = "sent_at" if event_type == "task-sent" else "received_at"
+            task_data[timestamp_key] = event.get("timestamp", time.time())
+            task_data["name"] = event.get("name", task_data.get("name", "unknown"))
+        elif event_type == "task-started":
+            self.pending_tasks.setdefault(task_id, {})["started_at"] = event.get(
+                "timestamp", time.time()
+            )
+        elif event_type in ("task-succeeded", "task-failed"):
+            self._record_task_completion(event, task_id, event_type)
+
+    def _record_task_completion(
+        self, event: dict, task_id: str, event_type: str
+    ) -> None:
+        """Observe execution time and forget the completed task."""
+        task_data = self.pending_tasks.pop(task_id, {})
+        started_at = task_data.get("started_at", task_data.get("sent_at"))
+        if started_at is None:
+            return
+
+        elapsed = event.get("runtime")
+        if elapsed is None:
+            elapsed = event.get("timestamp", time.time()) - started_at
+        task_latency_seconds.labels(
+            task_name=event.get("name", task_data.get("name", "unknown")),
+            state="succeeded" if event_type == "task-succeeded" else "failed",
+        ).observe(max(0, elapsed))
+
+    def _trim_pending_tasks(self) -> None:
+        """Drop expired and oldest entries when task tracking exceeds its bound."""
+        if len(self.pending_tasks) <= self.max_pending_tasks:
+            return
+
+        cutoff_time = time.time() - 3600
+        expired = [
+            task_id
+            for task_id, data in self.pending_tasks.items()
+            if data.get("sent_at", float("inf")) < cutoff_time
+        ]
+        for task_id in expired:
+            del self.pending_tasks[task_id]
+
+        excess_count = len(self.pending_tasks) - self.max_pending_tasks
+        for task_id in list(self.pending_tasks)[:excess_count]:
+            del self.pending_tasks[task_id]

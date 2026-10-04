@@ -4,7 +4,7 @@ lifetime
 """
 from functools import lru_cache
 from typing import Optional, AnyStr
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 from dotenv import load_dotenv
 
