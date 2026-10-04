@@ -31,15 +31,15 @@ async def send_plain_email(payload: EmailRequestDto, background_tasks: Backgroun
         return BadRequest(message="No data provided")
 
     try:
-        data = dict(
-            sender=payload.from_,
-            recipients=payload.to,
-            ccs=payload.cc,
-            subject=payload.subject,
-            bccs=payload.bcc,
-            message=payload.message,
-            attachments=payload.attachments,
-        )
+        data = {
+            "sender": payload.from_,
+            "recipients": payload.to,
+            "ccs": payload.cc,
+            "subject": payload.subject,
+            "bccs": payload.bcc,
+            "message": payload.message,
+            "attachments": payload.attachments,
+        }
 
         email_request = EmailRequest(**data)
 

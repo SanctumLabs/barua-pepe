@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "225b77aa466dc10bb3d58963d5178da8f1ebd4396779a44415b8de0906024916"
+            "sha256": "16b55bca5d59e0162edcd75f6a91b47419ac8e3a5aa5294de174ae1a07444935"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -873,6 +873,15 @@
             "markers": "python_version >= '3.7'",
             "version": "==1.4.4"
         },
+        "prometheus-client": {
+            "hashes": [
+                "sha256:04a91bcf94e2cf74a44a1a874d651a2e853ed354b6e822f3b7487751465d5c2b",
+                "sha256:fa93d06737aa02bacd05794768508bb97d2fbee28cb3bca04eaae92f0ca953d6"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.9'",
+            "version": "==0.26.0"
+        },
         "prompt-toolkit": {
             "hashes": [
                 "sha256:01c0891d7f9237d5e339f7d3e42cdae80b7534abb1c7c0e3352efba6231492f2",
@@ -899,6 +908,15 @@
             ],
             "markers": "python_version >= '3.9'",
             "version": "==2.13.5"
+        },
+        "pydantic-settings": {
+            "hashes": [
+                "sha256:0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42",
+                "sha256:694b793e84f766ba76a90ebdefc01d0a9a045dab0382bee70393da93712ad117"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.10'",
+            "version": "==2.15.0"
         },
         "pydantic-core": {
             "hashes": [

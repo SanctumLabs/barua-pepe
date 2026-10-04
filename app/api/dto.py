@@ -2,7 +2,7 @@
 Base Data Transfer Objects
 """
 from typing import Generic, TypeVar, Optional
-from pydantic.generics import GenericModel
+from pydantic.generics import GenericModel  # pylint: disable=no-name-in-module
 
 DataT = TypeVar("DataT")
 

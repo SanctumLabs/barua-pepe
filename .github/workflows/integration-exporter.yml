@@ -1,0 +1,81 @@
+name: Integration — Celery Event Exporter
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install pipenv
+          pipenv requirements --dev > requirements.txt
+          pip install --no-deps -r requirements.txt
+
+      - name: Run exporter unit tests
+        run: pytest -q tests/exporter
+
+      - name: Start infrastructure (RabbitMQ / Redis / SMTP)
+        run: |
+          docker compose up -d broker cache smtp
+        env:
+          RABBITMQ_DEFAULT_USER: exporter-test
+          RABBITMQ_DEFAULT_PASS: exporter-test-password
+
+      - name: Wait for RabbitMQ
+        run: |
+          for i in $(seq 1 60); do
+            if curl --fail --silent --user "$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS" \
+              --output /dev/null http://localhost:15672/api/overview; then
+              echo "RabbitMQ is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          docker compose logs broker
+          exit 1
+        env:
+          RABBITMQ_DEFAULT_USER: exporter-test
+          RABBITMQ_DEFAULT_PASS: exporter-test-password
+
+      - name: Start Celery worker
+        run: |
+          nohup celery -A app.worker.celery_app worker --events -l info -n gh-worker@%n --concurrency=1 --include tests.integration.exporter_smoke_task > celery-worker.log 2>&1 &
+        env:
+          BROKER_HOST: localhost
+          BROKER_PORT: 5672
+          BROKER_USER: exporter-test
+          BROKER_PASSWORD: exporter-test-password
+          RESULT_BACKEND_HOST: localhost
+
+      - name: Run integration smoke (exporter)
+        run: |
+          python3 -m tests.integration.run_exporter_and_send_task
+        env:
+          BROKER_HOST: localhost
+          BROKER_PORT: 5672
+          BROKER_USER: exporter-test
+          BROKER_PASSWORD: exporter-test-password
+          RESULT_BACKEND_HOST: localhost
+
+      - name: Collect logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exporter-integration-logs
+          if-no-files-found: ignore
+          path: |
+            celery-worker.log
+            logs/*.log
