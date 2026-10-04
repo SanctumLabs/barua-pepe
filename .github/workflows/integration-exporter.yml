@@ -37,7 +37,8 @@ jobs:
       - name: Wait for RabbitMQ
         run: |
           for i in $(seq 1 60); do
-            if docker exec barua-pepe-queue rabbitmqctl status >/dev/null 2>&1; then
+            if curl --fail --silent --user "$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS" \
+              --output /dev/null http://localhost:15672/api/overview; then
               echo "RabbitMQ is ready"
               exit 0
             fi
@@ -45,6 +46,9 @@ jobs:
           done
           docker compose logs broker
           exit 1
+        env:
+          RABBITMQ_DEFAULT_USER: exporter-test
+          RABBITMQ_DEFAULT_PASS: exporter-test-password
 
       - name: Start Celery worker
         run: |
