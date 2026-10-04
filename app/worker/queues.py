@@ -46,13 +46,12 @@ barua_dead_letter_exchange = Exchange(
     name=BARUA_DEAD_LETTER_EXCHANGE_NAME, type="direct"
 )
 
-# Dead-letter failed messages to the error exchange so they land in the error queue.
-# Using the error exchange/routing key as the dead-letter target keeps the flow simple:
-# primary queue -> on TTL/negative-ack -> messages routed to error exchange -> error queue
+# Keep these arguments aligned with the deployed queue declaration. RabbitMQ treats
+# queue arguments as immutable; the dead-letter exchange binding routes to the sink.
 dead_letter_queue_option = {
     "x-message-ttl": 5000,  # delay until the message is transferred in milliseconds
-    "x-dead-letter-exchange": BARUA_ERROR_EXCHANGE_NAME,  # route failed messages to error exchange
-    "x-dead-letter-routing-key": BARUA_ERROR_ROUTING_KEY_NAME,
+    "x-dead-letter-exchange": BARUA_DEAD_LETTER_EXCHANGE_NAME,
+    "x-dead-letter-routing-key": BARUA_DEAD_LETTER_ROUTING_KEY_NAME,
 }
 
 barua_queue = Queue(
@@ -62,7 +61,6 @@ barua_queue = Queue(
     queue_arguments=dead_letter_queue_option,
 )
 
-# Error queue should be the final sink and not dead-letter back to itself
 barua_error_queue = Queue(
     name=BARUA_ERROR_QUEUE_NAME,
     routing_key=BARUA_ERROR_ROUTING_KEY_NAME,

@@ -103,6 +103,19 @@ def wait_for_rabbitmq(timeout=60.0):
     raise RuntimeError(f"RabbitMQ did not become ready: {last_error}")
 
 
+def wait_for_message(channel, queue, timeout=10.0, poll_interval=0.1, auto_ack=False):
+    deadline = time.monotonic() + timeout
+    while True:
+        result = channel.basic_get(queue=queue, auto_ack=auto_ack)
+        if result[0] is not None:
+            return result
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return result
+        time.sleep(min(poll_interval, remaining))
+
+
 def test_dlx_end_to_end():
     """Bring up RabbitMQ via docker-compose, publish a message, reject it and assert it lands in the error queue.
 
@@ -110,8 +123,6 @@ def test_dlx_end_to_end():
     `docker compose up -d broker` and stops it at the end using `docker compose stop broker`.
     """
     broker_environment = os.environ.copy()
-    broker_environment["RABBITMQ_DEFAULT_USER"] = BROKER_USER
-    broker_environment["RABBITMQ_DEFAULT_PASS"] = BROKER_PASSWORD
     subprocess.check_call(
         ["docker", "compose", "up", "-d", "broker"],
         env=broker_environment,
@@ -142,8 +153,9 @@ def test_dlx_end_to_end():
         assert method_frame is not None, "No message received from primary queue"
 
         ch.basic_reject(delivery_tag=method_frame.delivery_tag, requeue=False)
-        time.sleep(2)
-        err_method, _, err_body = ch.basic_get(queue=ERROR_QUEUE, auto_ack=True)
+        err_method, _, err_body = wait_for_message(
+            ch, ERROR_QUEUE, timeout=10.0, auto_ack=True
+        )
 
         assert err_method is not None, "Message did not arrive in error queue"
         assert json.loads(err_body.decode()) == payload

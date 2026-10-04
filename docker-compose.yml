@@ -22,17 +22,13 @@ services:
 
     broker:
         image: rabbitmq:3.7.9-management
-        container_name: barua-pepe-queue
         hostname: broker
-        environment:
-            RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
-            RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
-            RABBITMQ_LOAD_DEFINITIONS: "1"
         ports:
             - "5672:5672"
             - "15672:15672"
         volumes:
             - broker_data:/var/lib/rabbitmq
+            - ./docker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
             - ./docker/rabbitmq_definitions.json:/etc/rabbitmq/definitions.json:ro
 
     smtp:

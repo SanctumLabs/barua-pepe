@@ -53,7 +53,9 @@ def configure_log_sink(log_type: str):
     Returns either a file path (development) or stdout (production/containerized)
     """
     return (
-        f"logs/{log_type}.log" if os.environ.get("ENV") == "development" else sys.stdout
+        f"logs/{log_type}.log"
+        if os.environ.get("ENV", "development") == "development"
+        else sys.stdout
     )
 
 

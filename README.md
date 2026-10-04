@@ -57,17 +57,43 @@ You will first need to install the dependencies as specified in the Pipfile file
 
 ## Running the application
 
-1. Start by first running `docker-compose up` in root of project to run services required/needed by this service.
-2. Run Dev server of application with either of the following commands:
+1. Start by first running `docker compose up -d` in root of project to run services required/needed by this service.
+2. For a worker running outside Docker, create a RabbitMQ account and set the worker's broker credentials:
+   `docker compose exec broker rabbitmqctl add_user barua-pepe 'replace-with-a-strong-password'`, then
+   `docker compose exec broker rabbitmqctl set_permissions -p / barua-pepe ".*" ".*" ".*"`.
+   Set `BROKER_USER` and `BROKER_PASSWORD` to the same values for the worker.
+3. Run Dev server of application with either of the following commands:
     1. `python asgi_server.py`
     2. `uvicorn app:app --port 5000 --reload`
     3. `make run`
     4. `make run-reload`
-3. Run celery workers with either:
+4. Run celery workers with either:
     1. `celery -A app.worker.celery_app worker --events -l info -n barua-pepe-worker@%n --concurrency=5`
     2. `make run-worker`
 
 With the application running feel free to test out the API. The docs will be available on http://localhost:5000/docs
+
+### RabbitMQ topology and persistent queues
+
+The Compose broker loads `docker/rabbitmq_definitions.json` at startup via
+`management.load_definitions` in `docker/rabbitmq.conf`. The definitions declare
+the application exchanges, queues, and bindings. All application queues retain
+their existing immutable arguments: the primary and analytics queues use
+`x-message-ttl` and the `barua-dead-letter-exchange` target, while the error
+queue remains an argument-free final sink. The dead-letter exchange is bound
+to the error queue.
+If `BARUA_*` environment variables customize queue names or routing keys, keep
+the imported definitions aligned with those values before starting the broker.
+
+RabbitMQ does not migrate immutable queue arguments when definitions are
+re-imported. Keep the queue arguments in `app/worker/queues.py` and the
+definitions file aligned with existing deployed queues. To change queue
+arguments, use an explicit migration: create versioned replacement queues,
+stop publishing to the old queues, transfer messages with a confirmed shovel
+or drain them with consumers, verify the old queues have no ready or
+unacknowledged messages and that transferred messages are accounted for, then
+switch producers and workers. Delete old queues only after verifying they are
+empty; restarting the broker or re-importing definitions is not a migration.
 
 ## Application setup
 
