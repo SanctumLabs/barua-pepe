@@ -4,7 +4,8 @@ DTO objects for mail endpoint
 from typing import List
 
 # pylint: disable=no-name-in-module
-from pydantic import BaseModel, validator, Field
+from pydantic import BaseModel, ConfigDict, Field, root_validator
+from app.domain.entities.email_request import EmailRequest
 from app.domain.entities.email_sender import EmailSender
 from app.domain.entities.email_recipient import EmailRecipient
 from app.domain.entities.email_attachment import EmailAttachment
@@ -26,38 +27,31 @@ class EmailAttachmentDto(EmailAttachment):
 
 
 # pylint: disable=too-few-public-methods
-class EmailRequestDto(BaseModel):
+class EmailRequestDto(EmailRequest):
     """
     Email Request Payload
     """
 
-    from_: EmailSenderDto = Field(alias="from")
-    to: List[EmailRecipientDto]
-    cc: List[EmailRecipientDto] | None
-    bcc: List[EmailRecipientDto] | None
-    subject: str
-    message: str
-    attachments: List[EmailAttachmentDto] | None
+    sender: EmailSenderDto = Field(alias="from")
+    recipients: List[EmailRecipientDto] = Field(alias="to")
+    ccs: List[EmailRecipientDto] | None = Field(default=None, alias="cc")
+    bccs: List[EmailRecipientDto] | None = Field(default=None, alias="bcc")
+    attachments: List[EmailAttachmentDto] | None = None
 
-    @validator("subject")
-    # pylint: disable=no-self-argument
-    def subject_must_be_valid(cls, sub):
-        """
-        Validates subject
-        """
-        if len(sub) == 0:
-            raise ValueError("must not be empty")
-        return sub
+    model_config = ConfigDict(populate_by_name=True)
 
-    @validator("message")
+    @root_validator(pre=True)
     # pylint: disable=no-self-argument
-    def message_must_be_valid(cls, mes):
-        """
-        Validates message
-        """
-        if len(mes) == 0:
-            raise ValueError("must not be empty")
-        return mes
+    def accept_from_field_name(cls, values):
+        """Accepts the historical ``from_`` spelling as well as ``from``."""
+        if isinstance(values, dict) and "from" not in values and "from_" in values:
+            values = dict(values)
+            values["from"] = values.pop("from_")
+        return values
+
+    def to_email_request(self) -> EmailRequest:
+        """Converts the HTTP representation into the canonical request."""
+        return EmailRequest.parse_obj(self.dict())
 
 
 # pylint: disable=too-few-public-methods

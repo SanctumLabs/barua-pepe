@@ -7,7 +7,6 @@ from app.logger import log as logger
 from app.api.dto import ApiResponse, BadRequest
 from app.exceptions import AppException
 from app.domain.send_email import send_email
-from app.domain.entities import EmailRequest
 from .dto import EmailRequestDto, EmailResponseDto
 
 router = APIRouter(tags=["Email"])
@@ -32,30 +31,28 @@ async def send_plain_email(payload: EmailRequestDto, background_tasks: Backgroun
         return BadRequest(message="No data provided")
 
     try:
-        data = {
-            "sender": payload.from_,
-            "recipients": payload.to,
-            "ccs": payload.cc,
-            "subject": payload.subject,
-            "bccs": payload.bcc,
-            "message": payload.message,
-            "attachments": payload.attachments,
-        }
-
-        email_request = EmailRequest(**data)
+        email_request = payload.to_email_request()
 
         # propagate request_id into background work when available
         request_id = getattr(request.state, "request_id", None)
         # log context-aware info if middleware bound a logger
         bound_log = getattr(request.state, "log", logger)
-        bound_log.info("Enqueuing email send", recipient_count=len(payload.to))
+        bound_log.info(
+            "Enqueuing email send", recipient_count=len(payload.recipients)
+        )
         background_tasks.add_task(send_email, email_request, request_id)
 
         return ApiResponse(
-            status=status.HTTP_200_OK, message="Email sent out successfully"
+            status=status.HTTP_200_OK,
+            data=None,
+            message="Email sent out successfully",
         )
     except AppException as exc:
-        logger.error(f"Failed to send email to {payload.to} with error {exc}")
+        logger.error(
+            f"Failed to send email to {payload.recipients} with error {exc}"
+        )
         return ApiResponse(
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR, message="Failed to send email"
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            data=None,
+            message="Failed to send email",
         )

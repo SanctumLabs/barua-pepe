@@ -21,13 +21,14 @@ def send_plain_mail(request: EmailRequest):
     """
     logger.info(f"Sending email request {request}")
 
-    sender = request.get("sender")
-    recipients = request.get("recipients")
-    ccs = request.get("ccs", [])
-    bccs = request.get("bccs", [])
-    subject = request.get("subject")
-    message = request.get("message")
-    attachments = request.get("attachments", [])
+    payload = request.dict()
+    sender = payload["sender"]
+    recipients = payload["recipients"]
+    ccs = payload["ccs"] or []
+    bccs = payload["bccs"] or []
+    subject = payload["subject"]
+    message = payload["message"]
+    attachments = payload["attachments"]
 
     if get_config().mail_smtp_enabled:
         email_svc = SmtpServer()

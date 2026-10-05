@@ -1,6 +1,8 @@
 """
 Mail Analytics tasks can be found here
 """
+from typing import Any
+
 from app.worker.celery_app import celery_app
 from app.logger import log
 from app.services.mail import send_plain_mail
@@ -14,15 +16,16 @@ from app.domain.entities import EmailRequest
     name="mail_analytics_task",
     acks_late=True,
 )
-@log.catch
-def mail_analytics_task(self, data: EmailRequest):
+@log.catch(reraise=True)
+def mail_analytics_task(self, data: dict[str, Any]):
     """
     Task that handles analytics for email messages in the background. Whether there was a failed delivery, it's tracked
     here.
     """
 
+    email_request = EmailRequest.from_task_payload(data)
     try:
-        return send_plain_mail(**data)
+        return send_plain_mail(email_request)
     # pylint: disable=broad-except
     except Exception as exc:
         log.error(

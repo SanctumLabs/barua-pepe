@@ -12,7 +12,7 @@ class EmailSender(BaseModel):
     """
 
     email: EmailStr
-    name: str
+    name: str | None = None
 
     @validator("name")
     # pylint: disable=no-self-argument

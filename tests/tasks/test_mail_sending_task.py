@@ -3,6 +3,8 @@ from unittest.mock import patch
 from celery.exceptions import Retry
 import pytest
 from pytest import raises
+from pydantic import ValidationError
+from app.domain.entities import EmailRequest
 from app.tasks.mail_sending_task import mail_sending_task
 
 
@@ -32,7 +34,78 @@ class MailSendingTaskTestCases(unittest.TestCase):
 
         mail_sending_task(data=data)
 
-        send_plain_mail_patch.assert_called_with(data)
+        request = send_plain_mail_patch.call_args.args[0]
+        self.assertIsInstance(request, EmailRequest)
+        self.assertEqual(sender, request.sender.dict())
+        self.assertEqual(recipients, [recipient.dict() for recipient in request.recipients])
+        self.assertEqual(ccs, [recipient.dict() for recipient in request.ccs])
+        self.assertEqual(bcc, [recipient.dict() for recipient in request.bccs])
+        self.assertEqual(attachments, [attachment.dict() for attachment in request.attachments])
+
+    @patch("app.tasks.mail_sending_task.send_plain_mail")
+    def test_mail_sending_task_accepts_legacy_payload_without_optional_fields(
+        self, send_plain_mail_patch
+    ):
+        """Legacy messages may omit optional CC, BCC, and attachment fields."""
+        data = dict(
+            sender={"email": "johndoe@example.com"},
+            recipients=["janedoe@example.com"],
+            subject="Hello Jane!",
+            message="Testing 1 2 3",
+        )
+
+        mail_sending_task(data=data)
+
+        request = send_plain_mail_patch.call_args.args[0]
+        self.assertIsNone(request.ccs)
+        self.assertIsNone(request.bccs)
+        self.assertIsNone(request.attachments)
+        self.assertEqual("janedoe@example.com", str(request.recipients[0].email))
+
+    @patch("app.tasks.mail_sending_task.send_plain_mail")
+    def test_mail_sending_task_rejects_invalid_payload_before_delivery(
+        self, send_plain_mail_patch
+    ):
+        """Invalid queued messages fail validation without attempting delivery."""
+        data = dict(
+            sender={"email": "johndoe@example.com"},
+            recipients=[],
+            subject="Hello Jane!",
+            message="Testing 1 2 3",
+        )
+
+        with raises(ValidationError):
+            mail_sending_task(data=data)
+
+        send_plain_mail_patch.assert_not_called()
+
+    def test_task_payload_serialization_preserves_legacy_keys(self):
+        """New messages keep the previously serialized Celery field names."""
+        request = EmailRequest.from_task_payload(
+            dict(
+                sender={"email": "johndoe@example.com", "name": "John Doe"},
+                recipients=[{"email": "janedoe@example.com", "name": "Jane Doe"}],
+                ccs=[{"email": "jack@example.com", "name": "Jack"}],
+                bccs=[{"email": "spy@example.com", "name": "Mr Spy"}],
+                subject="Hello Jane!",
+                message="Testing 1 2 3",
+                attachments=[
+                    dict(
+                        filename="somefile.png",
+                        content="file contents",
+                        type="image/png",
+                    )
+                ],
+            )
+        )
+
+        payload = request.to_task_payload()
+
+        self.assertIn("recipients", payload)
+        self.assertIn("ccs", payload)
+        self.assertIn("bccs", payload)
+        self.assertNotIn("to", payload)
+        self.assertEqual("spy@example.com", payload["bccs"][0]["email"])
 
     @unittest.skip("self.retry is not raising celery.exceptions.Retry exception. This needs to be investigated further")
     @patch("app.tasks.mail_sending_task.send_plain_mail")

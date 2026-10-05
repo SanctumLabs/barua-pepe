@@ -12,5 +12,5 @@ def send_email(data: EmailRequest, request_id: str | None = None):
     :param request_id: optional request id for tracing from HTTP request
     """
     mail_sending_task.apply_async(
-        kwargs={"data": data.dict(), "request_id": request_id}
+        kwargs={"data": data.to_task_payload(), "request_id": request_id}
     )
