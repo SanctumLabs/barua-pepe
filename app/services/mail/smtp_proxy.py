@@ -88,8 +88,8 @@ class SmtpServer(EmailService):
         body = MIMEMultipart()
         body["From"] = sender.get("email")
         body["To"] = ", ".join(email.get("email") for email in recipients)
-        body["Cc"] = ", ".join(email.get("email") for email in ccs)
-        body["Bcc"] = ", ".join(email.get("email") for email in bcc)
+        if ccs:
+            body["Cc"] = ", ".join(email.get("email") for email in ccs)
         body["Subject"] = subject
 
         body.attach(MIMEText(message, "plain"))
@@ -122,7 +122,10 @@ class SmtpServer(EmailService):
             # pylint: disable=duplicate-code
             self.server.sendmail(
                 from_addr=sender.get("email"),
-                to_addrs=[email.get("email") for email in recipients],
+                to_addrs=[
+                    email.get("email")
+                    for email in recipients + (ccs or []) + (bcc or [])
+                ],
                 msg=text,
             )
             return {

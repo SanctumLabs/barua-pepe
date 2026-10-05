@@ -1,4 +1,5 @@
 import smtplib
+from email import message_from_string
 from unittest.mock import Mock, patch
 
 import pytest
@@ -10,6 +11,39 @@ from app.services.mail.exceptions import (
 )
 from app.services.mail.sendgrid_email_service import SendGridEmailService
 from app.services.mail.smtp_proxy import SmtpServer
+
+
+@patch("app.services.mail.smtp_proxy.smtplib.SMTP")
+def test_smtp_sends_cc_and_bcc_in_envelope_without_exposing_bcc(_smtp_factory):
+    provider = SmtpServer()
+    original_server = provider.server
+    smtp_server = Mock()
+    provider.server = smtp_server
+    request = EmailRequest(
+        sender={"email": "sender@example.com"},
+        recipients=["to@example.com"],
+        ccs=[{"email": "cc@example.com"}],
+        bccs=[{"email": "bcc@example.com"}],
+        subject="A subject",
+        message="A message",
+    )
+
+    with patch.object(provider, "_SmtpServer__check_connection", return_value=True):
+        try:
+            provider.send_email(request)
+        finally:
+            provider.server = original_server
+
+    sendmail_kwargs = smtp_server.sendmail.call_args.kwargs
+    assert sendmail_kwargs["to_addrs"] == [
+        "to@example.com",
+        "cc@example.com",
+        "bcc@example.com",
+    ]
+    message = message_from_string(sendmail_kwargs["msg"])
+    assert message["To"] == "to@example.com"
+    assert message["Cc"] == "cc@example.com"
+    assert "Bcc" not in message
 
 
 def make_request():
