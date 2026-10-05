@@ -1,9 +1,10 @@
 import asyncio
+from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
-from fastapi import BackgroundTasks
 from starlette.requests import Request
+from starlette.responses import Response
 
 from app.api.mailer.dto import EmailRequestDto
 from app.api.mailer.routes import send_plain_email
@@ -81,7 +82,6 @@ def test_sendmail_route_converts_http_payload_to_canonical_contract():
             ],
         }
     )
-    background_tasks = BackgroundTasks()
     request = Request(
         {
             "type": "http",
@@ -89,15 +89,18 @@ def test_sendmail_route_converts_http_payload_to_canonical_contract():
             "path": "/api/v1/baruapepe/sendmail/",
             "headers": [],
             "query_string": b"",
-            "state": {},
+            "state": {"request_id": "trace-123"},
         }
     )
 
-    response = asyncio.run(send_plain_email(payload, background_tasks, request))
+    with patch("app.api.mailer.routes.dispatch_email") as dispatch_email:
+        response = asyncio.run(send_plain_email(payload, request, Response()))
 
-    enqueued_request = background_tasks.tasks[0].args[0]
-    assert response.status == 200
+    dispatch_args = dispatch_email.call_args.args
+    enqueued_request = dispatch_args[0]
+    assert response.status == 202
     assert isinstance(enqueued_request, EmailRequest)
     assert str(enqueued_request.recipients[0].email) == "to@example.com"
     assert str(enqueued_request.ccs[0].email) == "cc@example.com"
     assert str(enqueued_request.bccs[0].email) == "bcc@example.com"
+    assert dispatch_args[2] == "trace-123"

@@ -104,6 +104,9 @@ There is the tree view of the current application:
 ```plain
 app
 |-- __init__.py
+|-- application
+|   |-- __init__.py
+|   `-- email_dispatch.py
 |-- api
 |   |-- __init__.py
 |   |-- dto.py
@@ -124,10 +127,12 @@ app
 |   |   |-- email_recipient.py
 |   |   |-- email_request.py
 |   |   `-- email_sender.py
-|   `-- send_email.py
 |-- exceptions.py
 |-- infra
 |   |-- __init__.py
+|   |-- adapters
+|   |   |-- __init__.py
+|   |   `-- celery_email_dispatcher.py
 |   |-- handlers
 |   |   |-- __init__.py
 |   |   `-- exception_handlers.py
@@ -186,9 +191,10 @@ uses [FastAPI](https://fastapi.tiangolo.com/) framework. This can be found [here
 with [config](./app/config.py) which is used to setup the application. These configurations are derived from environment
 variables as defined [here](./.env.example). If these need to be changed, this is where that's done.
 
-The [domain](./app/domain) contains the use cases of the application or the intent which drives what the application can
-and can not do. This means if you intend to extend it to do more than email sending, you can define this here & then
-drive that intent outwards to meet the need(Following a Hexagonal architecture approach).
+The [domain](./app/domain) contains the provider-neutral email request and participant models. Application operations
+live in [application](./app/application); email dispatch depends on a small dispatcher interface rather than Celery.
+The production Celery adapter is in [infra/adapters](./app/infra/adapters), keeping queue publishing outside the
+domain model and replaceable at the application seam.
 
 [Infra](./app/infra) contains _infrastructure_ setup like [middleware](./app/infra/middleware)
 and [handlers](./app/infra/handlers) that do not affect the overal running of the application but do add more

@@ -3,6 +3,8 @@ Mail sending tasks can be found here
 """
 from typing import Any
 
+from pydantic import ValidationError
+
 from app.worker.celery_app import celery_app
 from app.logger import log
 from app.metrics import email_send_attempts, email_send_failures

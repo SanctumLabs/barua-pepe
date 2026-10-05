@@ -11,26 +11,28 @@ def make_email_request():
     return EmailRequest(sender=sender, recipients=[recipient], ccs=None, bccs=None, subject="sub", message="msg", attachments=None)
 
 
-def test_send_email_forwards_request_id(monkeypatch):
-    """send_email should call mail_sending_task.apply_async with request_id forwarded"""
+def test_celery_email_dispatcher_forwards_request_id(monkeypatch):
+    """Celery adapter forwards the request ID and serialized request."""
+    from app.infra.adapters.celery_email_dispatcher import CeleryEmailDispatcher
+
     called = {}
 
     def fake_apply_async(kwargs):
-        called['kwargs'] = kwargs
+        called["kwargs"] = kwargs
 
-    # monkeypatch the task object
-    import app.tasks.mail_sending_task as mail_task_mod
+    import app.infra.adapters.celery_email_dispatcher as dispatcher_module
 
-    monkeypatch.setattr(mail_task_mod.mail_sending_task, 'apply_async', staticmethod(fake_apply_async))
+    monkeypatch.setattr(
+        dispatcher_module.mail_sending_task, "apply_async", fake_apply_async
+    )
 
-    from app.domain.send_email import send_email
+    request = make_email_request()
+    CeleryEmailDispatcher().dispatch(request, request_id="trace-123")
 
-    req = make_email_request()
-    send_email(req, request_id='trace-123')
-
-    assert 'kwargs' in called
-    assert called['kwargs'].get('request_id') == 'trace-123'
-    assert 'data' in called['kwargs']
+    assert called["kwargs"] == {
+        "data": request.to_task_payload(),
+        "request_id": "trace-123",
+    }
 
 
 def test_mail_sending_task_forwards_request_id_to_error_task(monkeypatch):

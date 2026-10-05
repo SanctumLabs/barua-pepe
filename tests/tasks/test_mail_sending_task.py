@@ -63,8 +63,9 @@ class MailSendingTaskTestCases(unittest.TestCase):
         self.assertEqual("janedoe@example.com", str(request.recipients[0].email))
 
     @patch("app.tasks.mail_sending_task.send_plain_mail")
+    @patch("app.tasks.mail_sending_task.mail_error_task.apply_async")
     def test_mail_sending_task_rejects_invalid_payload_before_delivery(
-        self, send_plain_mail_patch
+        self, mail_error_apply_async_patch, send_plain_mail_patch
     ):
         """Invalid queued messages fail validation without attempting delivery."""
         data = dict(
@@ -78,6 +79,9 @@ class MailSendingTaskTestCases(unittest.TestCase):
             mail_sending_task(data=data)
 
         send_plain_mail_patch.assert_not_called()
+        mail_error_apply_async_patch.assert_called_once_with(
+            kwargs={"data": data, "request_id": None}
+        )
 
     def test_task_payload_serialization_preserves_legacy_keys(self):
         """New messages keep the previously serialized Celery field names."""
