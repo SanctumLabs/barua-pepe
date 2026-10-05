@@ -1,6 +1,7 @@
 """
 SMTP Proxy service. This wraps functionality around an SMTP library
 """
+
 from typing import List, Dict
 import smtplib
 import ssl
@@ -12,11 +13,17 @@ from email.mime.text import MIMEText
 from app.config import config
 from app.logger import log
 from app.utils import singleton
-from .exceptions import ServiceIntegrationException
+from app.domain.entities import EmailRequest
+from .email_service import EmailDeliveryResult, EmailService
+from .exceptions import (
+    DeliveryOutcomeUnknownException,
+    DeliveryRejectedException,
+    ServiceIntegrationException,
+)
 
 
 @singleton
-class SmtpServer:
+class SmtpServer(EmailService):
     """
     SMTP Server
     """
@@ -127,6 +134,42 @@ class SmtpServer:
             log.error(f"Failed to send email {err}")
             raise ServiceIntegrationException(
                 f"Sending email from {sender} to {recipients} failed"
+            ) from err
+
+    def send_email(self, request: EmailRequest) -> EmailDeliveryResult:
+        """Submit the canonical email request using the SMTP server."""
+        sender = request.sender.dict()
+        recipients = [recipient.dict() for recipient in request.recipients]
+        ccs = [recipient.dict() for recipient in request.ccs or []]
+        bccs = [recipient.dict() for recipient in request.bccs or []]
+        attachments = [attachment.dict() for attachment in request.attachments or []]
+
+        try:
+            response = self.sendmail(
+                sender=sender,
+                recipients=recipients,
+                ccs=ccs,
+                bcc=bccs,
+                subject=request.subject,
+                message=request.message,
+                attachments=attachments,
+            )
+            return response
+        except Exception as err:
+            definitive_rejections = (
+                smtplib.SMTPRecipientsRefused,
+                smtplib.SMTPHeloError,
+                smtplib.SMTPAuthenticationError,
+                smtplib.SMTPConnectError,
+                smtplib.SMTPSenderRefused,
+                smtplib.SMTPDataError,
+            )
+            if isinstance(err.__cause__, definitive_rejections):
+                raise DeliveryRejectedException(
+                    "SMTP explicitly rejected the email request"
+                ) from err
+            raise DeliveryOutcomeUnknownException(
+                "SMTP failed without confirming whether the email request was accepted"
             ) from err
 
     def __check_connection(self) -> bool:

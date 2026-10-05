@@ -1,7 +1,7 @@
 """
 Wrapper for Sendgrid Email Service Provider
 """
-from typing import Dict, List
+
 import sendgrid as mail_client
 from sendgrid.helpers.mail import (
     Email,
@@ -20,9 +20,12 @@ from sendgrid.helpers.mail import (
 from app.utils import singleton
 from app.config import get_config
 from app.logger import log
-from .exceptions import ServiceIntegrationException
-from .email_service import EmailService
-from .types import RecipientList, EmailParticipant
+from app.domain.entities import EmailRequest
+from .exceptions import (
+    DeliveryOutcomeUnknownException,
+    DeliveryRejectedException,
+)
+from .email_service import EmailDeliveryResult, EmailService
 
 
 @singleton
@@ -42,67 +45,72 @@ class SendGridEmailService(EmailService):
         self.token = token
         self.mail_client = mail_client.SendGridAPIClient(api_key=token)
 
-    # pylint: disable=too-many-arguments,too-many-positional-arguments
-    def send_email(
-        self,
-        sender: EmailParticipant,
-        recipients: RecipientList,
-        ccs: RecipientList | None,
-        bcc: RecipientList | None,
-        subject: str,
-        message: str,
-        attachments: List[Dict[str, str]] | None,
-    ):
-
-        from_email = Email(email=sender.get("email"), name=sender.get("name"))
+    def send_email(self, request: EmailRequest) -> EmailDeliveryResult:
+        """Submit the canonical request using the SendGrid API."""
+        from_email = Email(
+            email=request.sender.email,
+            name=request.sender.name,
+        )
         to_emails = [
-            To(email=recipient.get("email"), name=recipient.get("name"))
-            for recipient in recipients
+            To(email=str(recipient.email), name=recipient.name)
+            for recipient in request.recipients
         ]
 
-        mail = Mail(from_email=from_email, to_emails=to_emails, subject=subject)
+        mail = Mail(from_email=from_email, to_emails=to_emails, subject=request.subject)
 
-        if "<html" in message:
-            mail.content = HtmlContent(content=message)
+        if "<html" in request.message:
+            mail.content = HtmlContent(content=request.message)
         else:
-            mail.content = Content(mime_type=MimeType.text, content=message)
+            mail.content = Content(mime_type=MimeType.text, content=request.message)
 
-        if ccs:
+        if request.ccs:
             mail.cc = [
-                Cc(email=recipient.get("email"), name=recipient.get("name"))
-                for recipient in ccs
+                Cc(email=str(recipient.email), name=recipient.name)
+                for recipient in request.ccs
             ]
-        if bcc:
+        if request.bccs:
             mail.bcc = [
-                Bcc(email=recipient.get("email"), name=recipient.get("name"))
-                for recipient in bcc
+                Bcc(email=str(recipient.email), name=recipient.name)
+                for recipient in request.bccs
             ]
 
-        if attachments:
+        if request.attachments:
             mail.attachment = [
                 Attachment(
-                    file_content=FileContent(attachment.get("content")),
-                    file_name=FileName(attachment.get("filename")),
-                    file_type=FileType(attachment.get("type")),
+                    file_content=FileContent(attachment.content),
+                    file_name=FileName(attachment.filename),
+                    file_type=FileType(attachment.type),
                 )
-                for attachment in attachments
+                for attachment in request.attachments
             ]
 
         try:
             response = self.mail_client.client.mail.send.post(request_body=mail.get())
             status_code = response.status_code
-            if not status_code >= 200 and status_code <= 299:
-                raise ServiceIntegrationException(
+            if 400 <= status_code <= 499:
+                raise DeliveryRejectedException(
                     f"Sending email failed with status code: {status_code}"
+                )
+            if not 200 <= status_code <= 299:
+                raise DeliveryOutcomeUnknownException(
+                    f"Sending email outcome unknown with status code: {status_code}"
                 )
             # pylint: disable=duplicate-code
             return {
                 "success": True,
-                "message": f"Message from {sender} successfully sent to {recipients}",
+                "message": f"Message from {request.sender.email} successfully accepted",
             }
-        # pylint: disable=broad-except
         except Exception as err:
-            log.error(f"Failed to send email {err}")
-            raise ServiceIntegrationException(
-                f"Sending email from {sender} to {recipients} failed"
+            if isinstance(
+                err, (DeliveryRejectedException, DeliveryOutcomeUnknownException)
+            ):
+                raise
+            log.error(f"Failed to send email with SendGrid: {err}")
+            status_code = getattr(err, "status_code", None)
+            if status_code is not None and 400 <= status_code <= 499:
+                raise DeliveryRejectedException(
+                    "SendGrid explicitly rejected the email request"
+                ) from err
+            raise DeliveryOutcomeUnknownException(
+                "Sending email with SendGrid failed; provider acceptance is unknown"
             ) from err

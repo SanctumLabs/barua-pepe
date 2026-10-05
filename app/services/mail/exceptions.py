@@ -1,6 +1,7 @@
 """
 Exceptions for Mail Services
 """
+
 from app.exceptions import AppException
 
 
@@ -16,3 +17,11 @@ class ServiceIntegrationException(AppException):
 
     def __init__(self, message=None):
         super().__init__(message or "Service Integration Error")
+
+
+class DeliveryRejectedException(ServiceIntegrationException):
+    """A provider explicitly confirmed it did not accept an email request."""
+
+
+class DeliveryOutcomeUnknownException(ServiceIntegrationException):
+    """A provider call failed without confirming whether it accepted the request."""
