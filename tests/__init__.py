@@ -1,10 +1,9 @@
 import os
 import unittest
-from unittest import mock
-from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from app.config import Config, get_config
 from app import app
+from app.services.auth.auth_service import get_current_auth
 
 
 class BaseTestCase(unittest.TestCase):
@@ -14,17 +13,22 @@ class BaseTestCase(unittest.TestCase):
     os.environ.update(SENTRY_ENABLED="False", RESULT_BACKEND="rpc")
 
     def setUp(self):
-        self.test_client = TestClient(app=app)
+        app.dependency_overrides[get_config] = self._get_settings_override
+        app.dependency_overrides[get_current_auth] = lambda: None
+        self.async_client = AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+            follow_redirects=True,
+        )
 
-        app.dependency_overrides[get_config] = self._get_settings_override()
-
-        self.async_client = AsyncClient(app=self.test_client, base_url="http://test")
-        with mock.patch('app.services.mail.SmtpServer') as mock_smtp:
-            mock_smtp.login = lambda x: print(x)
-            mock_smtp.logout = lambda x: print(x)
+    def setup_method(self, method):
+        self.setUp()
 
     def tearDown(self):
         pass
+
+    def teardown_method(self, method):
+        self.tearDown()
 
     @staticmethod
     def _get_settings_override():
