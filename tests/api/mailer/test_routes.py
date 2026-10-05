@@ -44,14 +44,17 @@ class TestMailApi(BaseTestCase):
         async with self.async_client as ac:
             response = await ac.post(base_url)
 
-        response_data = response.json
+        response_data = response.json()
 
         self.assertEqual(400, response.status_code)
-        self.assertEqual("No data provided", response_data.get("message"))
+        self.assertEqual(
+            "Something went wrong, please check the error messages below",
+            response_data.get("message"),
+        )
 
     @pytest.mark.anyio
-    async def test_throws_422_with_missing_required_fields_in_body(self):
-        """Test email api throws 422 with missing 'message' in JSON body"""
+    async def test_throws_400_with_missing_required_fields_in_body(self):
+        """Test email api throws 400 with missing 'message' in JSON body"""
         async with self.async_client as ac:
             response = await ac.post(base_url,
                                      data=dict(
@@ -60,14 +63,14 @@ class TestMailApi(BaseTestCase):
                                      )
                                      )
 
-        response_json = response.json
+        response_json = response.json()
 
-        self.assertEqual(422, response.status_code)
-        self.assertIsNotNone(response_json.get("errors"))
+        self.assertEqual(400, response.status_code)
+        self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
     @pytest.mark.anyio
-    async def test_throws_422_with_missing_to_required_field_in_body(self):
-        """Test email api throws 422 with missing to in JSON body"""
+    async def test_throws_400_with_missing_to_required_field_in_body(self):
+        """Test email api throws 400 with missing to in JSON body"""
         async with self.async_client as ac:
             response = await ac.post(
                 base_url,
@@ -77,14 +80,14 @@ class TestMailApi(BaseTestCase):
                 )
             )
 
-            response_json = response.json
+            response_json = response.json()
 
-        self.assertEqual(422, response.status_code)
-        self.assertIsNotNone(response_json.get("errors"))
+        self.assertEqual(400, response.status_code)
+        self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
     @pytest.mark.anyio
-    async def test_throws_422_with_missing_subject_in_body(self):
-        """Test email api throws 422 with missing 'subject' in JSON body"""
+    async def test_throws_400_with_missing_subject_in_body(self):
+        """Test email api throws 400 with missing 'subject' in JSON body"""
         async with self.async_client as ac:
             response = await ac.post(
                 base_url,
@@ -94,14 +97,14 @@ class TestMailApi(BaseTestCase):
                 )
             )
 
-        response_json = response.json
+        response_json = response.json()
 
-        self.assertEqual(422, response.status_code)
-        self.assertIsNotNone(response_json.get("errors"))
+        self.assertEqual(400, response.status_code)
+        self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
     @pytest.mark.anyio
-    async def test_throws_422_with_invalid_email_in_to_in_body(self):
-        """Test email api throws 422 with an invalid email in 'to' in JSON body"""
+    async def test_throws_400_with_invalid_email_in_to_in_body(self):
+        """Test email api throws 400 with an invalid email in 'to' in JSON body"""
         async with self.async_client as ac:
             response = await ac.post(
                 base_url,
@@ -112,14 +115,14 @@ class TestMailApi(BaseTestCase):
                 )
             )
 
-        response_json = response.json
+        response_json = response.json()
 
-        self.assertEqual(422, response.status_code)
-        self.assertIsNotNone(response_json.get("errors"))
+        self.assertEqual(400, response.status_code)
+        self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
     @pytest.mark.anyio
-    async def test_throws_422_with_invalid_length_of_subject_in_body(self):
-        """Test email api throws 422 with an invalid length of subject in JSON body"""
+    async def test_throws_400_with_invalid_length_of_subject_in_body(self):
+        """Test email api throws 400 with an invalid length of subject in JSON body"""
         async with self.async_client as ac:
             response = await ac.post(
                 base_url,
@@ -130,14 +133,14 @@ class TestMailApi(BaseTestCase):
                 )
             )
 
-        response_json = response.json
+        response_json = response.json()
 
-        self.assertEqual(422, response.status_code)
-        self.assertIsNotNone(response_json.get("errors"))
+        self.assertEqual(400, response.status_code)
+        self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
     @pytest.mark.anyio
-    async def test_throws_422_with_invalid_length_of_message_in_body(self):
-        """Test email api throws 422 with an invalid length of message in JSON body"""
+    async def test_throws_400_with_invalid_length_of_message_in_body(self):
+        """Test email api throws 400 with an invalid length of message in JSON body"""
         async with self.async_client as ac:
             response = await ac.post(
                 base_url,
@@ -147,14 +150,14 @@ class TestMailApi(BaseTestCase):
                     message=""
                 )
             )
-        response_json = response.json
+        response_json = response.json()
 
-        self.assert_status(actual=response.status_code, status_code=422)
-        self.assertIsNotNone(response_json.get("errors"))
+        self.assert_status(actual=response.status_code, status_code=400)
+        self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
     @pytest.mark.anyio
-    async def test_throws_422_with_invalid_length_from_in_body_if_provided(self):
-        """Test email api throws 422 with an invalid from in JSON body if it is provided"""
+    async def test_throws_400_with_invalid_length_from_in_body_if_provided(self):
+        """Test email api throws 400 with an invalid from in JSON body if it is provided"""
         async with self.async_client as ac:
             response = await ac.post(
                 base_url,
@@ -168,14 +171,14 @@ class TestMailApi(BaseTestCase):
                     "message": "Let us build a rocket to the Moon"
                 }
             )
-        response_json = response.json
+        response_json = response.json()
 
-        self.assert_status(actual=response.status_code, status_code=422)
-        self.assertIsNotNone(response_json.get("errors"))
+        self.assert_status(actual=response.status_code, status_code=400)
+        self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
     @pytest.mark.anyio
-    async def test_throws_422_with_invalid_length_of_cc_in_body(self):
-        """Test email api throws 422 with an invalid cc length in JSON body and invalid email in cc"""
+    async def test_throws_400_with_invalid_length_of_cc_in_body(self):
+        """Test email api throws 400 with an invalid cc length in JSON body and invalid email in cc"""
         async with self.async_client as ac:
             response = await ac.post(
                 base_url,
@@ -187,10 +190,10 @@ class TestMailApi(BaseTestCase):
                 )
             )
 
-            response_json = response.json
+            response_json = response.json()
 
-            self.assert_status(actual=response.status_code, status_code=422)
-            self.assertIsNotNone(response_json.get("errors"))
+            self.assert_status(actual=response.status_code, status_code=400)
+            self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
             response = await ac.post(
                 base_url,
@@ -201,14 +204,14 @@ class TestMailApi(BaseTestCase):
                     message="Let us build a rocket to the Moon"
                 )
             )
-            response_json = response.json
+            response_json = response.json()
 
-            self.assert_status(actual=response.status_code, status_code=422)
-            self.assertIsNotNone(response_json.get("errors"))
+            self.assert_status(actual=response.status_code, status_code=400)
+            self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
     @pytest.mark.anyio
-    async def test_throws_422_with_invalid_length_of_bcc_in_body(self):
-        """Test email api throws 422 with an invalid bcc length in JSON body and invalid email in bcc"""
+    async def test_throws_400_with_invalid_length_of_bcc_in_body(self):
+        """Test email api throws 400 with an invalid bcc length in JSON body and invalid email in bcc"""
         async with self.async_client as ac:
             response = await ac.post(
                 base_url,
@@ -220,10 +223,10 @@ class TestMailApi(BaseTestCase):
                     message="Let us build a rocket to the Moon"
                 )
             )
-            response_json = response.json
+            response_json = response.json()
 
-            self.assert_status(actual=response.status_code, status_code=422)
-            self.assertIsNotNone(response_json.get("errors"))
+            self.assert_status(actual=response.status_code, status_code=400)
+            self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
             response = await ac.post(
                 base_url,
@@ -235,14 +238,14 @@ class TestMailApi(BaseTestCase):
                     message="Let us build a rocket to the Moon"
                 )
             )
-            response_json = response.json
+            response_json = response.json()
 
-            self.assert_status(actual=response.status_code, status_code=422)
-            self.assertIsNotNone(response_json.get("errors"))
+            self.assert_status(actual=response.status_code, status_code=400)
+            self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
     @pytest.mark.anyio
-    async def test_throws_422_with_invalid_length_of_to_in_body(self):
-        """Test email api throws 422 with an invalid to length in JSON body"""
+    async def test_throws_400_with_invalid_length_of_to_in_body(self):
+        """Test email api throws 400 with an invalid to length in JSON body"""
         async with self.async_client as ac:
             response = await ac.post(
                 base_url,
@@ -254,14 +257,14 @@ class TestMailApi(BaseTestCase):
                     message="Let us build a rocket to the Moon"
                 )
             )
-            response_json = response.json
+            response_json = response.json()
 
-            self.assert_status(actual=response.status_code, status_code=422)
-            self.assertIsNotNone(response_json.get("errors"))
+            self.assert_status(actual=response.status_code, status_code=400)
+            self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
     @pytest.mark.anyio
-    async def test_throws_422_with_invalid_length_of_attachments_in_body(self):
-        """Test email api throws 422 with an invalid attachments length in JSON body and missing fields in
+    async def test_throws_400_with_invalid_length_of_attachments_in_body(self):
+        """Test email api throws 400 with an invalid attachments length in JSON body and missing fields in
         attachments """
         async with self.async_client as ac:
             response = await ac.post(
@@ -276,10 +279,10 @@ class TestMailApi(BaseTestCase):
                 )
             )
 
-            response_json = response.json
+            response_json = response.json()
 
-            self.assert_status(actual=response.status_code, status_code=422)
-            self.assertIsNotNone(response_json.get("errors"))
+            self.assert_status(actual=response.status_code, status_code=400)
+            self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
             response = await ac.post(
                 base_url,
@@ -297,10 +300,10 @@ class TestMailApi(BaseTestCase):
                 )
             )
 
-            response_json = response.json
+            response_json = response.json()
 
-            self.assert_status(actual=response.status_code, status_code=422)
-            self.assertIsNotNone(response_json.get("errors"))
+            self.assert_status(actual=response.status_code, status_code=400)
+            self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
             response = await ac.post(
                 base_url,
@@ -318,10 +321,10 @@ class TestMailApi(BaseTestCase):
                 )
             )
 
-            response_json = response.json
+            response_json = response.json()
 
-            self.assert_status(actual=response.status_code, status_code=422)
-            self.assertIsNotNone(response_json.get("errors"))
+            self.assert_status(actual=response.status_code, status_code=400)
+            self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
             response = await ac.post(
                 base_url,
@@ -344,10 +347,10 @@ class TestMailApi(BaseTestCase):
                 )
             )
 
-            response_json = response.json
+            response_json = response.json()
 
-            self.assert_status(actual=response.status_code, status_code=422)
-            self.assertIsNotNone(response_json.get("errors"))
+            self.assert_status(actual=response.status_code, status_code=400)
+            self.assertIsNotNone(response_json.get("data", {}).get("errors"))
 
     @pytest.mark.anyio
     @patch("app.api.mailer.routes.dispatch_email")
@@ -375,7 +378,7 @@ class TestMailApi(BaseTestCase):
                 }
             )
 
-            response_json = response.json
+            response_json = response.json()
 
             self.assert_status(actual=response.status_code, status_code=202)
             self.assertEqual(
@@ -404,13 +407,14 @@ class TestMailApi(BaseTestCase):
                     "attachments": [
                         dict(
                             content="random_string",
-                            filename="rocket_schematics.pdf"
+                            filename="rocket_schematics.pdf",
+                            type="application/pdf",
                         ),
                     ]
                 }
             )
 
-            response_json = response.json
+            response_json = response.json()
 
             self.assert_status(actual=response.status_code, status_code=500)
             self.assertEqual("Failed to send email", response_json.get("message"))
