@@ -1,10 +1,13 @@
 """
 Mail sending tasks can be found here
 """
+from typing import Any
+
 from app.worker.celery_app import celery_app
 from app.logger import log
 from app.metrics import email_send_attempts, email_send_failures
 from app.services.mail import send_plain_mail
+from app.domain.entities import EmailRequest
 from .mail_error_task import mail_error_task
 
 
@@ -16,7 +19,7 @@ from .mail_error_task import mail_error_task
     acks_late=True,
 )
 @log.catch(reraise=True)
-def mail_sending_task(self, data: dict, request_id: str | None = None):
+def mail_sending_task(self, data: dict[str, Any], request_id: str | None = None):
     """
     Worker task that handles sending email messages in the background
     :param data: dict payload for the email
@@ -25,10 +28,17 @@ def mail_sending_task(self, data: dict, request_id: str | None = None):
     # bind a logger with context so structured logs include request_id and task id
     bound_log = log.bind(request_id=request_id, celery_task_id=getattr(self.request, 'id', None))
     try:
+        email_request = EmailRequest.from_task_payload(data)
+    except ValidationError as exc:
+        bound_log.error(f"Invalid mail payload: {exc}")
+        email_send_failures.inc()
+        mail_error_task.apply_async(kwargs={"data": data, "request_id": request_id})
+        raise
+    try:
         bound_log.info("Processing mail_sending_task")
         email_send_attempts.inc()
 
-        result = send_plain_mail(data)
+        result = send_plain_mail(email_request)
 
         return result
     # pylint: disable=broad-except

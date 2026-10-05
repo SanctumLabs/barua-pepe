@@ -334,7 +334,8 @@ class TestMailApi(BaseTestCase):
                     attachments=[
                         dict(
                             content="random_string",
-                            filename="rocket_schematics.pdf"
+                            filename="rocket_schematics.pdf",
+                            type="application/pdf",
                         ),
                         dict(
                             filename="rocket_parts.pdf"
@@ -367,7 +368,8 @@ class TestMailApi(BaseTestCase):
                     "attachments": [
                         dict(
                             content="random_string",
-                            filename="rocket_schematics.pdf"
+                            filename="rocket_schematics.pdf",
+                            type="application/pdf",
                         ),
                     ]
                 }
