@@ -27,7 +27,13 @@ def mail_sending_task(self, data: dict[str, Any], request_id: str | None = None)
     """
     # bind a logger with context so structured logs include request_id and task id
     bound_log = log.bind(request_id=request_id, celery_task_id=getattr(self.request, 'id', None))
-    email_request = EmailRequest.from_task_payload(data)
+    try:
+        email_request = EmailRequest.from_task_payload(data)
+    except ValidationError as exc:
+        bound_log.error(f"Invalid mail payload: {exc}")
+        email_send_failures.inc()
+        mail_error_task.apply_async(kwargs={"data": data, "request_id": request_id})
+        raise
     try:
         bound_log.info("Processing mail_sending_task")
         email_send_attempts.inc()
