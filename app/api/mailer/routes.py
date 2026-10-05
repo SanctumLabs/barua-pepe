@@ -1,12 +1,14 @@
 """
 Mail Router
 """
-from fastapi import APIRouter, BackgroundTasks, Request
+
+from fastapi import APIRouter, Request, Response
 from starlette import status
 from app.logger import log as logger
 from app.api.dto import ApiResponse, BadRequest
 from app.exceptions import AppException
-from app.domain.send_email import send_email
+from app.application.email_dispatch import dispatch_email
+from app.infra.adapters.celery_email_dispatcher import celery_email_dispatcher
 from .dto import EmailRequestDto, EmailResponseDto
 
 router = APIRouter(tags=["Email"])
@@ -15,42 +17,40 @@ router = APIRouter(tags=["Email"])
 @logger.catch
 @router.post(
     path="/sendmail",
-    summary="Send Email",
-    description="Sends an email",
+    summary="Submit Email",
+    description="Accepts an email request for asynchronous processing",
     response_model=EmailResponseDto,
+    status_code=status.HTTP_202_ACCEPTED,
 )
-async def send_plain_email(payload: EmailRequestDto, background_tasks: BackgroundTasks, request: Request):
+async def send_plain_email(
+    payload: EmailRequestDto, request: Request, response: Response
+):
     """
-    Send email API function. This is a POST REST endpoint that accepts requests that meet the criteria defined by the
-    schema validation before sending a plain text email
+    Accept a validated email request and enqueue it for asynchronous processing.
     :return: JSON response to client
     :rtype: dict
     """
 
     if not payload:
+        response.status_code = status.HTTP_400_BAD_REQUEST
         return BadRequest(message="No data provided")
 
     try:
         email_request = payload.to_email_request()
 
-        # propagate request_id into background work when available
         request_id = getattr(request.state, "request_id", None)
-        # log context-aware info if middleware bound a logger
         bound_log = getattr(request.state, "log", logger)
-        bound_log.info(
-            "Enqueuing email send", recipient_count=len(payload.recipients)
-        )
-        background_tasks.add_task(send_email, email_request, request_id)
+        bound_log.info("Enqueuing email send", recipient_count=len(payload.recipients))
+        dispatch_email(email_request, celery_email_dispatcher, request_id)
 
         return ApiResponse(
-            status=status.HTTP_200_OK,
+            status=status.HTTP_202_ACCEPTED,
             data=None,
-            message="Email sent out successfully",
+            message="Email request accepted for processing",
         )
     except AppException as exc:
-        logger.error(
-            f"Failed to send email to {payload.recipients} with error {exc}"
-        )
+        logger.error(f"Failed to send email to {payload.recipients} with error {exc}")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return ApiResponse(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             data=None,
