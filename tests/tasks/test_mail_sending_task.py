@@ -5,6 +5,7 @@ import pytest
 from pytest import raises
 from pydantic import ValidationError
 from app.domain.entities import EmailRequest
+from app.services.mail.exceptions import DeliveryOutcomeUnknownException
 from app.tasks.mail_sending_task import mail_sending_task
 
 
@@ -20,7 +21,9 @@ class MailSendingTaskTestCases(unittest.TestCase):
         message = "Testing 1 2 3"
         ccs = [dict(email="jack@example.com", name="Jack")]
         bcc = [dict(email="spy@example.com", name="Mr Spy")]
-        attachments = [dict(filename="somefile.png", content="file contents", type="image/png")]
+        attachments = [
+            dict(filename="somefile.png", content="file contents", type="image/png")
+        ]
 
         data = dict(
             sender=sender,
@@ -37,10 +40,14 @@ class MailSendingTaskTestCases(unittest.TestCase):
         request = send_plain_mail_patch.call_args.args[0]
         self.assertIsInstance(request, EmailRequest)
         self.assertEqual(sender, request.sender.dict())
-        self.assertEqual(recipients, [recipient.dict() for recipient in request.recipients])
+        self.assertEqual(
+            recipients, [recipient.dict() for recipient in request.recipients]
+        )
         self.assertEqual(ccs, [recipient.dict() for recipient in request.ccs])
         self.assertEqual(bcc, [recipient.dict() for recipient in request.bccs])
-        self.assertEqual(attachments, [attachment.dict() for attachment in request.attachments])
+        self.assertEqual(
+            attachments, [attachment.dict() for attachment in request.attachments]
+        )
 
     @patch("app.tasks.mail_sending_task.send_plain_mail")
     def test_mail_sending_task_accepts_legacy_payload_without_optional_fields(
@@ -111,11 +118,92 @@ class MailSendingTaskTestCases(unittest.TestCase):
         self.assertNotIn("to", payload)
         self.assertEqual("spy@example.com", payload["bccs"][0]["email"])
 
-    @unittest.skip("self.retry is not raising celery.exceptions.Retry exception. This needs to be investigated further")
+    def test_unknown_delivery_outcome_is_not_retried(self):
+        """Unknown provider acceptance is routed for inspection, not resubmitted."""
+        unknown_outcome = DeliveryOutcomeUnknownException("connection lost")
+
+        class DummyRequest:
+            retries = 0
+            id = "celery-request-id"
+
+        class DummySelf:
+            request = DummyRequest()
+            max_retries = 3
+
+            def retry(self, *args, **kwargs):
+                raise AssertionError("Unknown outcomes must not be retried")
+
+        data = {
+            "sender": {"email": "sender@example.com"},
+            "recipients": ["recipient@example.com"],
+            "subject": "subject",
+            "message": "message",
+        }
+
+        with (
+            patch(
+                "app.tasks.mail_sending_task.send_plain_mail",
+                side_effect=unknown_outcome,
+            ),
+            patch(
+                "app.tasks.mail_sending_task.mail_error_task.apply_async"
+            ) as error_task_apply_async,
+            pytest.raises(DeliveryOutcomeUnknownException) as raised,
+        ):
+            mail_sending_task.run.__func__(DummySelf(), data, request_id="trace-123")
+
+        assert raised.value is unknown_outcome
+        error_task_apply_async.assert_called_once_with(
+            kwargs={"data": data, "request_id": "trace-123"}
+        )
+
+    def test_other_delivery_failures_still_retry(self):
+        """Failures without an unknown outcome retain Celery retry behavior."""
+        failure = RuntimeError("temporary provider error")
+        retry_args = {}
+
+        class RetryRequested(Exception):
+            pass
+
+        class DummyRequest:
+            retries = 0
+            id = "celery-request-id"
+
+        class DummySelf:
+            request = DummyRequest()
+            max_retries = 3
+
+            def retry(self, **kwargs):
+                retry_args.update(kwargs)
+                raise RetryRequested
+
+        data = {
+            "sender": {"email": "sender@example.com"},
+            "recipients": ["recipient@example.com"],
+            "subject": "subject",
+            "message": "message",
+        }
+
+        with (
+            patch("app.tasks.mail_sending_task.send_plain_mail", side_effect=failure),
+            patch(
+                "app.tasks.mail_sending_task.mail_error_task.apply_async"
+            ) as error_task_apply_async,
+            pytest.raises(RetryRequested),
+        ):
+            mail_sending_task.run.__func__(DummySelf(), data, request_id="trace-123")
+
+        assert retry_args == {"countdown": 30, "exc": failure}
+        error_task_apply_async.assert_not_called()
+
+    @unittest.skip(
+        "self.retry is not raising celery.exceptions.Retry exception. This needs to be investigated further"
+    )
     @patch("app.tasks.mail_sending_task.send_plain_mail")
     @patch("app.tasks.mail_sending_task.mail_sending_task.retry")
-    def test_mail_sending_task_raises_exception_on_failure(self, mail_sending_task_retry,
-                                                           send_plain_mail_patch):
+    def test_mail_sending_task_raises_exception_on_failure(
+        self, mail_sending_task_retry, send_plain_mail_patch
+    ):
         """Mail Sending Task should retry sending plain email on failure"""
         sender = {"email": "johndoe@example.com", "name": "John Doe"}
         recipients = [dict(email="janedoe@example.com", name="Jane Doe")]
@@ -123,7 +211,9 @@ class MailSendingTaskTestCases(unittest.TestCase):
         message = "Testing 1 2 3"
         ccs = [dict(email="jack@example.com", name="Jack")]
         bcc = [dict(email="spy@example.com", name="Mr Spy")]
-        attachments = [dict(filename="somefile.png", content="file contents", type="image/png")]
+        attachments = [
+            dict(filename="somefile.png", content="file contents", type="image/png")
+        ]
 
         data = dict(
             sender=sender,
@@ -145,5 +235,5 @@ class MailSendingTaskTestCases(unittest.TestCase):
             mail_sending_task(data=data)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

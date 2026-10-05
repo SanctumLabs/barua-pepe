@@ -1,15 +1,21 @@
 """
 Wrapper for MailChimp Email Service provider
 """
-from typing import Dict, List, Literal
+
+from typing import Literal
 from mailchimp_transactional.api_client import ApiClientError
 import mailchimp_transactional as mail_client
 from app.utils import singleton
 from app.config import get_config
 from app.logger import log
-from .exceptions import ServiceIntegrationException
-from .email_service import EmailService
-from .types import RecipientList, EmailParticipant
+from app.domain.entities import EmailRequest
+from .exceptions import (
+    DeliveryOutcomeUnknownException,
+    DeliveryRejectedException,
+    ServiceIntegrationException,
+)
+from .email_service import EmailDeliveryResult, EmailService
+from .types import RecipientList
 
 
 @singleton
@@ -38,54 +44,64 @@ class MailChimpEmailService(EmailService):
                 "Failed to configure mail service"
             ) from error
 
-    # pylint: disable=too-many-arguments,too-many-positional-arguments
-    def send_email(
-        self,
-        sender: EmailParticipant,
-        recipients: RecipientList,
-        ccs: RecipientList | None,
-        bcc: RecipientList | None,
-        subject: str,
-        message: str,
-        attachments: List[Dict[str, str]] | None,
-    ):
+    def send_email(self, request: EmailRequest) -> EmailDeliveryResult:
+        """Submit the canonical request using the Mailchimp Transactional API."""
 
         recipients_to = self._setup_recipients(
-            recipients=recipients, recipient_type="to"
+            recipients=[recipient.dict() for recipient in request.recipients],
+            recipient_type="to",
         )
-        recipients_to += self._setup_recipients(recipients=ccs, recipient_type="cc")
-        recipients_to += self._setup_recipients(recipients=bcc, recipient_type="bcc")
+        recipients_to += self._setup_recipients(
+            recipients=[recipient.dict() for recipient in request.ccs or []],
+            recipient_type="cc",
+        )
+        recipients_to += self._setup_recipients(
+            recipients=[recipient.dict() for recipient in request.bccs or []],
+            recipient_type="bcc",
+        )
 
         mail = {
-            "from_email": sender.get("email"),
-            "subject": subject,
+            "from_email": request.sender.email,
+            "subject": request.subject,
             "to": recipients_to,
         }
 
-        if sender.get("name"):
-            mail.update({"from_name": sender.get("name")})
+        if request.sender.name:
+            mail.update({"from_name": request.sender.name})
 
-        if "<html" in message:
-            mail.update({"html": message})
+        if "<html" in request.message:
+            mail.update({"html": request.message})
         else:
-            mail.update({"text": message})
+            mail.update({"text": request.message})
 
-        if attachments:
-            mail.update({"attachments": attachments})
+        if request.attachments:
+            mail.update(
+                {
+                    "attachments": [
+                        attachment.dict() for attachment in request.attachments
+                    ]
+                }
+            )
 
         try:
-            response = self.mail_client.messages.send({"message": mail})
-            log.debug(
-                f"Message sent successfully from {sender} to {recipients}. Res: {response}"
-            )
+            self.mail_client.messages.send({"message": mail})
+            log.debug("Message sent successfully through Mailchimp Transactional")
             return {
                 "success": True,
-                "message": f"Message from {sender} successfully sent to {recipients}",
+                "message": f"Message from {request.sender.email} successfully accepted",
             }
         except ApiClientError as err:
             log.error(f"Failed to send email {err}")
-            raise ServiceIntegrationException(
-                f"Sending email from {sender} to {recipients} failed"
+            response = getattr(err, "response", None)
+            status_code = getattr(response, "status_code", None)
+            if status_code is None:
+                status_code = getattr(err, "status_code", None)
+            if status_code is not None and 400 <= status_code <= 499:
+                raise DeliveryRejectedException(
+                    "Mailchimp Transactional rejected the email request"
+                ) from err
+            raise DeliveryOutcomeUnknownException(
+                "Mailchimp Transactional failed without confirming request acceptance"
             ) from err
 
     @staticmethod

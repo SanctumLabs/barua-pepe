@@ -148,6 +148,7 @@ app
 |   `-- mail
 |       |-- __init__.py
 |       |-- email_service.py
+|       |-- delivery_policy.py
 |       |-- exceptions.py
 |       |-- mailchimp_email_service.py
 |       |-- mailer.py
@@ -174,6 +175,8 @@ we could also switch out how we do authentication in the [auth_service](./app/se
 something else
 maybe even a 3rd party authentication system.
 
+See [CONTEXT.md](./CONTEXT.md) for the project's email-domain vocabulary.
+
 The application uses Workers to handle the actual mail sending, this is to offload the application and allow it to serve
 more requests.
 The worker application and it's configuration can be found in [worker](./app/worker). This
@@ -194,7 +197,8 @@ variables as defined [here](./.env.example). If these need to be changed, this i
 The [domain](./app/domain) contains the provider-neutral email request and participant models. Application operations
 live in [application](./app/application); email dispatch depends on a small dispatcher interface rather than Celery.
 The production Celery adapter is in [infra/adapters](./app/infra/adapters), keeping queue publishing outside the
-domain model and replaceable at the application seam.
+domain model and replaceable at the application seam. Provider ordering and fallback policy live in
+[delivery_policy.py](./app/services/mail/delivery_policy.py).
 
 [Infra](./app/infra) contains _infrastructure_ setup like [middleware](./app/infra/middleware)
 and [handlers](./app/infra/handlers) that do not affect the overal running of the application but do add more
@@ -209,7 +213,10 @@ the wrapper services that contain the code to send out emails. These wrapper ser
 the [email_service class](./app/services/mail/email_service.py) to ensure that functionality is common across new 3rd
 party services that may be added. Currently, the services include SMTP, SendGrid & MailChimp, however, these are not
 limiting & more could be added based on the needs of the system or which email provider is chosen. The default to use is
-SMTP, but in case that fails, it defaults to a 3rd party.
+SMTP, with SendGrid as a fallback only when SMTP explicitly rejects the request. An ambiguous provider outcome is not
+retried through another provider, since the first provider may already have accepted the email and fallback could
+duplicate delivery. Provider ordering and fallback behavior are centralized in
+[delivery_policy.py](./app/services/mail/delivery_policy.py).
 
 ## Deployment
 

@@ -1,8 +1,18 @@
 """
 Abstract Email Service
 """
+
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import TypedDict
+
+from app.domain.entities import EmailRequest
+
+
+class EmailDeliveryResult(TypedDict):
+    """Provider-neutral result returned after a provider accepts a request."""
+
+    success: bool
+    message: str
 
 
 # pylint: disable=too-few-public-methods
@@ -15,18 +25,8 @@ class EmailService(ABC):
         pass
 
     @abstractmethod
-    # pylint: disable=too-many-arguments,too-many-positional-arguments
-    def send_email(
-        self,
-        sender: Dict[str, str],
-        recipients: List[Dict[str, str]],
-        ccs: List[Dict[str, str]] | None,
-        bcc: List[Dict[str, str]] | None,
-        subject: str,
-        message: str,
-        attachments: List[Dict[str, str]] | None,
-    ):
+    def send_email(self, request: EmailRequest) -> EmailDeliveryResult:
         """
-        Sends emails
+        Submits a canonical email request to the provider.
         """
         raise NotImplementedError("send_email not yet implemented")

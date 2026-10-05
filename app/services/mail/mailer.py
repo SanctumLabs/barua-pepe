@@ -5,69 +5,28 @@ Ensure that the correct environment variables have been set for the SMTP client 
 These env variables are imported and included in the config.py file under the Config class for these to be available in
 the current application context
 """
+
 from app.logger import log as logger
 from app.config import get_config
 from app.domain.entities import EmailRequest
-from .exceptions import EmailSendingException
+from .delivery_policy import deliver_email
 from .smtp_proxy import SmtpServer
 from .sendgrid_email_service import SendGridEmailService
 
 
-@logger.catch
+@logger.catch(reraise=True)
 def send_plain_mail(request: EmailRequest):
     """
     Sends a plain text email to a list of recipients with optional Carbon Copies and Blind Carbon Copies. This includes
     an option for sending email attachments
     """
-    logger.info(f"Sending email request {request}")
-
-    payload = request.dict()
-    sender = payload["sender"]
-    recipients = payload["recipients"]
-    ccs = payload["ccs"] or []
-    bccs = payload["bccs"] or []
-    subject = payload["subject"]
-    message = payload["message"]
-    attachments = payload["attachments"]
+    logger.info("Sending email request", recipient_count=len(request.recipients))
 
     if get_config().mail_smtp_enabled:
-        email_svc = SmtpServer()
+        primary = SmtpServer
+        fallback = SendGridEmailService
     else:
-        email_svc = SendGridEmailService()
+        primary = SendGridEmailService
+        fallback = None
 
-    try:
-        response = email_svc.sendmail(
-            sender=sender,
-            recipients=recipients,
-            ccs=ccs,
-            bcc=bccs,
-            subject=subject,
-            message=message,
-            attachments=attachments,
-        )
-
-        return response
-    # pylint: disable=broad-except
-    except Exception as err:
-        # this should only happen if there is a fallback, or we fail to send emails with the default setting
-        # if in that event, then the application should try sending an email using a MAIL API
-        logger.warning(
-            f"Failed to send email with error {err}, using alternative to send email"
-        )
-        try:
-            response = email_svc.send_email(
-                sender=sender,
-                recipients=recipients,
-                ccs=ccs,
-                bcc=bccs,
-                subject=subject,
-                message=message,
-                attachments=attachments,
-            )
-            return response
-        # pylint: disable=broad-except
-        except Exception as error:
-            logger.error(f"Failed to send message with alternative with error {error}")
-            raise EmailSendingException(
-                f"Failed to send email message from {sender} to {recipients}"
-            ) from error
+    return deliver_email(request, primary=primary, fallback=fallback)
