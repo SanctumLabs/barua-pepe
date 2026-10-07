@@ -10,7 +10,7 @@ Children are attached to their epic as sub-issues. Labels per the brief: one `se
 
 | # | Title | Severity | Phase |
 |---|---|---|---|
-| 858 | Epic: Phase 0 - stop the bleeding (security defaults, mail correctness, CI, container) | P0 | 0 |
+| 858 | Epic: Phase 0 - stop the bleeding (security defaults, mail correctness, CI, container) | P1 | 0 |
 | 859 | Epic: Phase 1 - platform contract and delivery-state foundation | P1 | 1 |
 | 860 | Epic: Phase 2 - provider plug-in model and send pipeline | P1 | 2 |
 | 861 | Epic: Phase 3 - provider feedback, suppression and unsubscribe compliance | P1 | 3 |
@@ -22,7 +22,7 @@ Children are attached to their epic as sub-issues. Labels per the brief: one `se
 
 | # | URL | Title | Sev | Epic | Findings |
 |---|---|---|---|---|---|
-| 865 | https://github.com/SanctumLabs/barua-pepe/issues/865 | Reject default API credentials and fix production-config detection (ENV vs ENVIRONMENT) | P0 | 858 | BAR-001, BAR-002 |
+| 865 | https://github.com/SanctumLabs/barua-pepe/issues/865 | Reject default API credentials and fix production-config detection (ENV vs ENVIRONMENT) | P1 | 858 | BAR-001, BAR-002 |
 | 866 | https://github.com/SanctumLabs/barua-pepe/issues/866 | Replace the 5 s message TTL on the primary queues with per-message expiry via versioned queues | P1 | 858 | BAR-007 |
 | 867 | https://github.com/SanctumLabs/barua-pepe/issues/867 | Fix SMTP MIME construction: attachments, HTML bodies, display names and partial recipient refusals | P1 | 858 | BAR-009, BAR-010, BAR-011 |
 | 868 | https://github.com/SanctumLabs/barua-pepe/issues/868 | Fix SMTP session lifecycle: authenticate in the worker, enforce TLS, add network timeouts | P1 | 858 | BAR-012, BAR-013 |

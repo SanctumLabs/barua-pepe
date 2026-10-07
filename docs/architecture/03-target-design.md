@@ -1,5 +1,11 @@
 > **Status: Proposed. Discovery output dated 2026-10-07; not accepted architecture.** Describes the code as inspected on that date and a proposal for its replacement. Decisions are tracked in the ADR index and open-question log.
 
+> **Superseded or added points (maintainer decisions, 2026-10-07; see niosys `docs/platform/18-decision-log.md`).**
+> 1. **Unknown outcome (sections 3.1 `on_unknown_outcome`, 5.3, ADR on unknown outcome):** "never auto-resends, hold" is replaced. A missed message is worse than a duplicate: reconcile by lookup; if nothing can be confirmed by the deadline, **resend, capped and counted**. `on_unknown_outcome` defaults to `resend`. Issue #881 amended.
+> 2. **Broker (sections 1, 2, ADR-1):** Kafka is the production broker. barua-pepe moves from RabbitMQ/Celery to a **broker port with Kafka as the first binding**; RabbitMQ remains a configurable binding. Issue #878 rescoped. "PostgreSQL and RabbitMQ" in Q-BAR-04 becomes "PostgreSQL and Kafka".
+> 3. **BAR-001:** default credentials are dev/test only; severity P1 (#865).
+> 4. **Deployability:** whether the self-contained-unit principle applies here is open (Q-PLAT-19).
+
 # barua-pepe: target design
 
 Scope: the email gateway inside the notification platform (niosys decides who gets what, barua-pepe decides how an email leaves the building and tells the caller what happened). Sketches only; no product code was written. Assumptions are marked (A) and are listed as open questions in `06-open-questions.md`.

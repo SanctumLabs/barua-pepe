@@ -11,7 +11,7 @@ Issues filed: epics #858 to #864, children #865 to #895 (see `07-issues-filed.md
 
 | ID | Sev | Category | Title | Evidence | V/S | Issue |
 |---|---|---|---|---|---|---|
-| BAR-001 | P0 | security | Default shared API credentials are accepted, and production validation ignores them | `app/config.py:63-64`, `:66-95`; `app/services/auth/auth_service.py:14-26` | V | #865 |
+| BAR-001 | P1 (was P0; dev/test defaults, D2) | security | Default shared API credentials are accepted, and production validation ignores them | `app/config.py:63-64`, `:66-95`; `app/services/auth/auth_service.py:14-26` | V | #865 |
 | BAR-002 | P1 | security | Production config validation is inert: it reads `ENVIRONMENT` while everything else uses `ENV` | `app/config.py:38,72`; `app/logger.py:57,64,67`; `asgi_server.py:6`; `.env.example:17` | V | #865 |
 | BAR-003 | P1 | security | No tenant model or authz, any caller can send as any From, no sender-domain verification, SPF/DKIM/DMARC ownership undocumented | `app/api/mailer/dto.py:35`; `app/api/mailer/routes.py:25-58`; `README.md` | V | #888 |
 | BAR-004 | P2 | security | No limits or validation on attachment size, base64, MIME type, filename, recipient count, subject or message length, or CR/LF in subject and names | `app/domain/entities/email_attachment.py:14-37`; `email_request.py:24-58` | V | #884 |
@@ -52,7 +52,7 @@ Issues filed: epics #858 to #864, children #865 to #895 (see `07-issues-filed.md
 
 ## Detail
 
-### BAR-001 (P0, security): default API credentials, validator blind to them
+### BAR-001 (P1, security; was P0 until 2026-10-07: the defaults are for local development and tests only and no deployment runs on them, so the exposure is a misconfiguration risk; the inert production guard remains a defect): default API credentials, validator blind to them
 `Config.username`/`password` default to `barua-pepe-user`/`barua-pepe-password` (`config.py:63-64`). `get_current_auth` compares against exactly these values (`auth_service.py:14-26`). `validate_production_settings()` checks only SMTP credentials and `MAIL_API_TOKEN` (`config.py:77-92`). It never looks at `username`/`password`. I ran `Config()` with `ENVIRONMENT=production` and SMTP disabled plus an API token, and the validator passed with the default API credentials. The load test file `tests/loadtest/http_load.py:5-6` also embeds them.
 - Impact: a deployment that forgets `USERNAME`/`PASSWORD` is an open authenticated relay with a publicly known password. Any caller can send phishing mail from any From address (BAR-003) through the owner's SMTP or SendGrid reputation.
 - Fix: fail startup unless both are set and non-default in every non-test environment. Remove the defaults entirely. The longer-term fix is BAR-003.
