@@ -1,8 +1,8 @@
 > **Status: Proposed. Discovery output dated 2026-10-07; not accepted architecture.** Describes the code as inspected on that date and a proposal for its replacement. Decisions are tracked in the ADR index and open-question log.
 
 > **Superseded or added points (maintainer decisions, 2026-10-07; see niosys `docs/platform/18-decision-log.md`).**
-> 1. **Unknown outcome (sections 3.1 `on_unknown_outcome`, 5.3, ADR on unknown outcome):** "never auto-resends, hold" is replaced. A missed message is worse than a duplicate: reconcile by lookup; if nothing can be confirmed by the deadline, **resend, capped and counted**. `on_unknown_outcome` defaults to `resend`. Issue #881 amended.
-> 2. **Broker (sections 1, 2, ADR-1):** Kafka is the production broker. barua-pepe moves from RabbitMQ/Celery to a **broker port with Kafka as the first binding**; RabbitMQ remains a configurable binding. Issue #878 rescoped. "PostgreSQL and RabbitMQ" in Q-BAR-04 becomes "PostgreSQL and Kafka".
+> 1. **Unknown outcome (sections 3.1 `on_unknown_outcome`, 5.3, ADR on unknown outcome):** "never auto-resends, hold" was replaced in the body below as well (section 5.3, the state model, the `SendEmail` example and ADR 9). A missed message is worse than a duplicate: reconcile by lookup; if nothing can be confirmed by the deadline, **resend, capped and counted**. `on_unknown_outcome` defaults to `resend`. Issue #881 amended.
+> 2. **Broker (sections 1, 2, ADR-1):** Kafka is the production broker. barua-pepe moves from RabbitMQ/Celery to a **broker port with Kafka as the first binding**; RabbitMQ remains a configurable binding; the AMQP, exchange, `x-death` and KEDA-on-RabbitMQ mechanics in the body are now described as the optional binding, with Kafka equivalents first. Issue #878 rescoped. "PostgreSQL and RabbitMQ" in Q-BAR-04 becomes "PostgreSQL and Kafka".
 > 3. **BAR-001:** default credentials are dev/test only; severity P1 (#865).
 > 4. **Deployability:** whether the self-contained-unit principle applies here is open (Q-PLAT-19).
 > 5. **Optional validity bound (proposed, not final):** no new attempt after `expires_at`; resend-after-unknown only within validity; `expired` is terminal and alerted (comment on #881). This is also the intended meaning of the 5 s queue TTL if it was meant to drop stale mail (#866).
@@ -13,7 +13,7 @@ Scope: the email gateway inside the notification platform (niosys decides who ge
 
 ## 1. Principles
 1. **Accepted means durable.** `202` is returned only after the request is persisted (state row plus outbox in one transaction). Every accepted message ends in exactly one terminal state, and a reconciliation job proves it.
-2. **Transport-agnostic contract.** One logical command (`SendEmail`) and one logical event stream (`EmailStateChanged`), expressible as an AMQP message, a REST body or a gRPC message. The broker or REST choice is deployment configuration, never a code dependency.
+2. **Transport-agnostic contract.** One logical command (`SendEmail`) and one logical event stream (`EmailStateChanged`), expressible as a Kafka message (the first binding), an AMQP message (the optional RabbitMQ binding), a REST body or a gRPC message. The broker or REST choice is deployment configuration, never a code dependency.
 3. **At-least-once everywhere, effectively-once sends.** Duplicate input is absorbed by idempotency keys. Duplicate provider submissions are avoided by an attempt journal plus the explicit "outcome unknown" state, and are never retried blindly.
 4. **Provider-neutral core, thin adapters.** The core knows `ProviderPort.submit(OutboundMessage) -> SubmitResult`. Everything else is an adapter.
 5. **The gateway owns mail mechanics** (MIME, provider quirks, bounces, complaints, suppression, unsubscribe headers, reputation). It does not own user preferences, which belong to niosys (Q-BAR-03, Q-BAR-02).
@@ -21,7 +21,7 @@ Scope: the email gateway inside the notification platform (niosys decides who ge
 ## 2. Boundaries and components
 
 ```
-            REST/gRPC                          AMQP (or other broker)
+            REST/gRPC                          Kafka (first binding; others pluggable)
   caller ─────────────►  ┌──────────────┐ ◄──────────────── caller
                          │ Intake API   │  authn/z, validation, idempotency, size limits
                          └──────┬───────┘  (stateless, scales on RPS)
@@ -56,7 +56,7 @@ Scope: the email gateway inside the notification platform (niosys decides who ge
 | Send worker | Claims a message, applies suppression, limits and policy, renders MIME, calls a provider, records the attempt. | Stateless; scales on queue depth. |
 | Provider registry | Maps names to adapters, with config, health and a circuit breaker per provider. | Replaces `mailer.py:25-32`. |
 | Webhook receiver | Verifies signatures, deduplicates, translates provider events into state transitions and suppressions. | Public ingress, separate deployment and credentials. |
-| Reconciler | Finds messages stuck in `queued`/`sending`/`outcome_unknown` past their SLA. | Republishes, resolves via provider lookup, or fails them. |
+| Reconciler | Finds messages stuck in `queued`/`sending`/`outcome_unknown` past their SLA, and `sent` messages with no provider feedback after the feedback window. | Republishes, resolves via provider lookup, resends (capped), fails them, or closes `sent` as `delivered_unconfirmed`. |
 | Attachment service | Pre-signed upload, size and MIME enforcement, AV scan, claim-check reference. | ADR-5. |
 
 Existing code that stays: the `domain/entities` model (reshaped), `application/email_dispatch` seam, `delivery_policy` (extended), the SendGrid and SMTP adapters (after fixes), the Prometheus exporter idea, the DLX integration test idea.
@@ -64,15 +64,15 @@ Existing code that stays: the `domain/entities` model (reshaped), `application/e
 ## 3. Contracts (logical, versioned)
 
 ### 3.1 Command: `SendEmail` (schema `email.send.v1`)
-Envelope fields are the same on REST (headers and body), AMQP (properties and body) and gRPC (metadata and message).
+Envelope fields are the same on REST (headers and body), Kafka (headers and value; AMQP properties and body on the optional RabbitMQ binding) and gRPC (metadata and message).
 
 | Field | Where | Rules |
 |---|---|---|
-| `idempotency_key` | header `Idempotency-Key` / AMQP `message_id` | **Required.** 1-255 chars. Scope is `(tenant_id, key)`. Same key and same body hash gives the original response. Same key and different body gives `409 idempotency_conflict`. Retained 7 days (A). |
-| `correlation_id` | header `X-Correlation-Id` / AMQP `correlation_id` | Optional, echoed on every event. Generated if absent. |
-| `tenant_id` | derived from credentials (REST/gRPC); signed envelope claim or per-tenant vhost (AMQP) | Never trusted from the body on REST. |
+| `idempotency_key` | header `Idempotency-Key` / Kafka header `idempotency-key` (AMQP `message_id` on RabbitMQ) | **Required.** 1-255 chars. Scope is `(tenant_id, key)`. Same key and same body hash gives the original response. Same key and different body gives `409 idempotency_conflict`. Retained 7 days (A). |
+| `correlation_id` | header `X-Correlation-Id` / Kafka header `correlation-id` (AMQP `correlation_id` on RabbitMQ) | Optional, echoed on every event. Generated if absent. |
+| `tenant_id` | derived from credentials (REST/gRPC); signed envelope claim or per-tenant topic ACL (Kafka) or vhost (RabbitMQ) | Never trusted from the body on REST. |
 | `schema_version` | `application/vnd.baruapepe.send.v1+json` | Additive changes only inside a major version. |
-| `reply_to` | optional AMQP `reply_to` / callback URL id | Where state events go if the caller wants a dedicated route. Default: shared `email.state.v1` stream. |
+| `reply_to` | optional Kafka `reply-to` header (AMQP `reply_to` on RabbitMQ) / callback URL id | Where state events go if the caller wants a dedicated route. Default: shared `email.state.v1` stream. |
 
 Body:
 ```json
@@ -92,7 +92,7 @@ Body:
   "send_after": "2026-10-08T07:00:00Z",
   "expires_at": "2026-10-08T07:15:00Z",
   "provider_hint": "primary",
-  "on_unknown_outcome": "hold"
+  "on_unknown_outcome": "resend"
 }
 ```
 Rules: exactly one of `content` or `template`. `content.text` is required if `html` is given (or auto-derived and flagged). Header allow-list only, no CR/LF anywhere. `category=marketing` requires `unsubscribe`. `from.email` must match a verified sender for the tenant. At most 50 recipients per message (A). Inline attachment bodies are accepted up to 256 KB (A), above that a `ref` is required.
@@ -105,7 +105,7 @@ Responses (REST `POST /v1/messages`):
 Other REST: `GET /v1/messages/{id}` (state, attempts, reason), `POST /v1/messages/{id}:cancel` (only before `sending`), `GET/PUT/DELETE /v1/suppressions/{email}`, `POST /v1/attachments` (pre-signed upload), `GET /healthz` (liveness), `GET /readyz`. gRPC mirrors this as `EmailService.Send / GetMessage / Cancel` with the same envelope in metadata.
 
 ### 3.2 Event: `EmailStateChanged` (schema `email.state.v1`)
-Published to a topic exchange (`email.state`, routing key `email.<state>.<tenant_id>`), or POSTed to a registered callback (signed), or read back with `GET`. CloudEvents-compatible.
+Published to the Kafka topic `barua-pepe.events.v1` (key `message_id`; tenant and state carried as headers), or on the optional RabbitMQ binding to a topic exchange (`email.state`, routing key `email.<state>.<tenant_id>`), or POSTed to a registered callback (signed), or read back with `GET`. CloudEvents-compatible.
 ```json
 {
   "specversion": "1.0", "id": "evt_01J…", "type": "email.delivered", "source": "barua-pepe",
@@ -127,9 +127,10 @@ Published to a topic exchange (`email.state`, routing key `email.<state>.<tenant
      │            │           │          │          ├────► bounced (hard | soft | block)
   rejected    suppressed   expired   outcome_unknown ├────► complained
  (not stored  (terminal)  (terminal)  (needs resolve)└────► failed (terminal)
-  as message)                         ──► sent | failed | (hold) 
+  as message)                         ──► sent | failed | resend (capped)
 ```
-- `accepted`: persisted, idempotency recorded. `queued`: handed to the work queue by the outbox. `sending`: a worker holds a lease and has written an attempt row before calling the provider. `sent`: provider returned acceptance (SMTP `250`, SendGrid `202`). `delivered`/`bounced`/`complained`: from provider webhooks or DSNs. `failed`: permanent rejection, or retries/expiry exhausted. `outcome_unknown`: the provider call failed ambiguously. This never auto-resends (see 5.3). `suppressed` is a terminal pre-send decision.
+- `accepted`: persisted, idempotency recorded. `queued`: handed to the work queue by the outbox. `sending`: a worker holds a lease and has written an attempt row before calling the provider. `sent`: provider returned acceptance (SMTP `250`, SendGrid `202`). `delivered`/`bounced`/`complained`: from provider webhooks or DSNs. `failed`: permanent rejection, or retries/expiry exhausted. `outcome_unknown`: the provider call failed ambiguously. It is reconciled by lookup and, if still unconfirmed at the deadline, resent (capped, counted; see 5.3). `suppressed` is a terminal pre-send decision.
+- `delivered_unconfirmed` (terminal): a `sent` message with no feedback (no webhook, DSN or bounce) by the `feedback_window` (A: 72 h) is closed in this state by the reconciler. Every accepted message therefore reaches a terminal state without claiming a delivery that was never confirmed (SMTP acceptance is not delivery).
 - `opened`/`clicked` are recorded as events on a `sent` or `delivered` message, not as states.
 - Transitions are guarded in SQL (`UPDATE … WHERE state IN (…)`) and each writes an `events` row and an outbox row in one transaction.
 
@@ -169,12 +170,12 @@ The outbox relay publishes `{message_id}` only (not the content) to the work que
    - **accepted** → `sent`.
    - **permanent rejection** (SMTP 5xx, HTTP 4xx other than 408/429) → the recipient or message `failed`. No retry. Fail over to the next provider only when the rejection is provider-specific (auth, account, quota) and not content-specific.
    - **transient** (SMTP 4xx, HTTP 429/5xx before acceptance, connection refused, DNS) → retry with exponential backoff and full jitter (30 s, 2 m, 10 m, 1 h … capped), until `expires_at` or max attempts, then `failed(expired)`. Failover is allowed because nothing was accepted.
-   - **ambiguous** (timeout after the request body was sent, connection reset mid-`DATA`, 5xx after acceptance) → `outcome_unknown`. No resend and no failover. Resolve via webhook or provider message-id lookup within a window (A: 24 h). Default policy `on_unknown_outcome=hold` raises an alert and an event. Callers who prefer duplicates over loss can set `resend`.
+   - **ambiguous** (timeout after the request body was sent, connection reset mid-`DATA`, 5xx after acceptance) → `outcome_unknown`. No failover before reconciliation. Resolve via webhook or provider message-id lookup within a window (A: 24 h). If still unconfirmed at the deadline, **resend** (decision D6: a missed message is worse than a duplicate), capped (A: 2 resends) and counted, with an alert and an event; a resend happens only before `expires_at` when the caller set one. Default policy is `on_unknown_outcome=resend`.
 4. Deterministic `Message-ID: <{message_id}@{sending-domain}>` is set on every attempt so that duplicate deliveries are at least detectable downstream.
 5. After the call: write the attempt outcome, the state transition, the event and the outbox row in one transaction.
 
 ### 5.4 Poison messages and DLQ
-Schema-invalid or unprocessable queue messages go to `email.send.dlq` with `x-death` reason and are recorded in `events` (`failed`, `internal_error`). A replay CLI re-publishes them after a fix. The DLQ is monitored (alert on depth > 0 for 5 min) and has no consumer that discards. Retry delays are held in the database (`next_attempt_at`, polled with `FOR UPDATE SKIP LOCKED`) or in tiered delay queues (ADR-3), never in per-message broker TTLs on the main queue.
+Schema-invalid or unprocessable queue messages go to the dead-letter topic `barua-pepe.commands.dlq.v1` (queue `email.send.dlq` on the optional RabbitMQ binding) with origin topic, partition, offset, error and attempt-count headers (`x-death` on RabbitMQ) and are recorded in `events` (`failed`, `internal_error`). A replay CLI re-publishes them after a fix. The DLQ is monitored (alert on depth > 0 for 5 min) and has no consumer that discards. Retry delays are held in the database (`next_attempt_at`, polled with `FOR UPDATE SKIP LOCKED`) or in tiered retry topics or delay queues (ADR-3), never in per-message broker TTLs on the main queue.
 
 ### 5.5 MIME and content
 A single `MimeBuilder` using `email.message.EmailMessage` (SMTP policy): `multipart/alternative` (text then html), `multipart/mixed` for attachments, RFC 2047 encoded names, `Date`, deterministic `Message-ID`, `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click` for `marketing` (and recommended for bulk-like transactional), header allow-list, and CR/LF rejection. SMTP uses this output directly. HTTP providers receive the equivalent structured fields from the same internal `OutboundMessage`, so all providers render the same request the same way. Plain-text alternative is mandatory (derived from HTML if missing).
@@ -202,14 +203,14 @@ Recommended default: the gateway does not render templates, and niosys (which ow
 ## 6. Security model
 - **Authn:** OAuth2 client-credentials JWT (JWKS-verified, `aud`, short expiry) or mTLS from inside the mesh; per-tenant API keys (hashed, scoped, rotatable) for non-platform callers. No shared Basic credential. Broker access uses per-service credentials, with vhost or topic ACLs per tenant for AMQP intake.
 - **Authz:** scopes `email:send`, `email:read`, `suppression:write`, `admin`. A sender may only use `from` addresses of domains verified for its tenant. SPF, DKIM and DMARC: the gateway verifies at onboarding that DNS records for the sending domain are in place (provider-side DKIM or its own signing), and refuses to send otherwise. The playbook (who publishes which record) is documented per provider.
-- **Input:** hard limits (body 1 MB without attachments, recipients 50, subject 998 octets and no CR/LF, header allow-list), validated at both edges (REST and AMQP consumer) by the same schema.
+- **Input:** hard limits (body 1 MB without attachments, recipients 50, subject 998 octets and no CR/LF, header allow-list), validated at both edges (REST and broker consumer) by the same schema.
 - **Data:** PII minimisation (hashes in logs and metrics labels, never addresses), encryption at rest for message addresses and bodies, retention jobs, loguru `diagnose=False`, Sentry `send_default_pii=False` with a scrubber, Celery events or message payloads never carry content.
 - **Webhook ingress:** separate deployment, signature and timestamp checks, per-provider allow-listed source ranges when documented, no authenticated data path to the send side.
 - **Supply chain:** pinned, locked and audited dependencies, a non-root minimal image, read-only filesystem, no `latest` tags, SBOM, and secrets from the platform secret store (not `.env`).
 - **Abuse controls:** per-tenant send and recipient quotas, complaint-rate circuit breaker (auto-pause a tenant when complaints exceed a threshold), and audit log for credential and sender changes.
 
 ## 7. Scaling model and bottlenecks
-- Stateless intake and workers scale horizontally. Autoscale workers on `queue depth / drain rate` (KEDA on RabbitMQ) and the API on CPU/RPS.
+- Stateless intake and workers scale horizontally. Autoscale workers on `queue depth / drain rate` (KEDA on Kafka consumer-group lag; queue depth on RabbitMQ) and the API on CPU/RPS.
 - Bottlenecks, in expected order: (1) provider rate limits and per-IP warm-up ceilings (control with per-provider token buckets and tenant fair-share queues), (2) PostgreSQL write amplification (about 5 to 6 row writes per message: message, attempt, events, outbox, recipients. Batch outbox relays, use partitioned `events`, size connection pools, and consider `UNLOGGED` only for non-authoritative caches), (3) SMTP connection setup (pool and reuse connections, per-worker pool sized to relay limits), (4) object storage and AV throughput for attachments.
 - Priority lanes: `transactional-high`, `transactional`, `bulk`, as separate queues so bulk cannot starve OTPs. Per-tenant fairness uses weighted dequeue or per-tenant sub-queues above a threshold.
 - Batching: multi-recipient sends are split by provider limits. The batch endpoint accepts up to N independent messages (each with its own idempotency key) in one request. Providers with batch APIs are used where capabilities say so.
@@ -217,7 +218,7 @@ Recommended default: the gateway does not render templates, and niosys (which ow
 - Warm-up: per-IP-pool daily ramp schedule enforced in the rate limiter (for example 50, 100, 500, 1 000, 5 000 per day). Applies only if the platform operates its own IPs (Q-BAR-06).
 
 ## 8. Observability
-- **Correlation:** `correlation_id` and `message_id` on every log line, span and event. W3C `traceparent` propagated through REST, AMQP headers and outbox rows. OpenTelemetry for traces and metrics, Prometheus-compatible export.
+- **Correlation:** `correlation_id` and `message_id` on every log line, span and event. W3C `traceparent` propagated through REST, broker headers and outbox rows. OpenTelemetry for traces and metrics, Prometheus-compatible export.
 - **Metrics (RED plus pipeline):** `intake_requests_total{tenant,code}`, `intake_latency_seconds`, `messages_in_state{state}` (gauge from the DB), `time_in_state_seconds{state}`, `attempts_total{provider,outcome}`, `provider_latency_seconds{provider}`, `provider_circuit_state{provider}`, `queue_depth{queue}` and oldest-message age, `outbox_lag_seconds`, `webhook_events_total{provider,type,result}`, `suppressions_total{reason}`, `duplicate_suppressed_total`, `outcome_unknown_total`, `dlq_depth`. Tenant label only when cardinality is bounded.
 - **Logs:** structured JSON to stdout through one tested formatter; recipient hashes; no bodies.
 - **Health:** `/healthz` (process alive), `/readyz` (DB, broker, provider registry has at least one healthy provider).
@@ -239,15 +240,15 @@ Recommended default: the gateway does not render templates, and niosys (which ow
 
 | ADR | Decision | Options | Recommendation |
 |---|---|---|---|
-| 1 | Worker runtime and public queue contract | (a) keep Celery and make its message the contract; (b) Celery internally, with a separate public AMQP/gRPC contract mapped to it; (c) native consumer (aio-pika or FastStream) with no Celery | (c) in the end state, (b) as the migration step. Celery's protocol is private, python-specific and awkward for outbox and lease semantics. |
+| 1 | Worker runtime and public queue contract | (a) keep Celery and make its message the contract; (b) Celery internally, with a separate public broker/gRPC contract mapped to it; (c) native consumer behind the broker port (Kafka first, for example confluent-kafka or FastStream; aio-pika only for the optional RabbitMQ binding) with no Celery | (c) in the end state, (b) as the migration step. Celery's protocol is private, python-specific and awkward for outbox and lease semantics. **Kafka is the first binding (decision D5);** the port keeps RabbitMQ and others pluggable. |
 | 2 | State store | PostgreSQL; DynamoDB; Redis only; keep stateless | PostgreSQL (transactions for state plus outbox, `SKIP LOCKED`, familiar ops). Redis only for ephemeral rate limiting. |
-| 3 | Retry delay mechanism | tiered RabbitMQ delay queues (TTL+DLX); delayed-message exchange plugin; DB `next_attempt_at` | DB-driven `next_attempt_at` with a scheduler loop, since state is already in Postgres and per-message TTL on the main queue is what caused BAR-007. |
+| 3 | Retry delay mechanism | tiered retry topics (Kafka) or delay queues (RabbitMQ TTL+DLX); delayed-message exchange plugin; DB `next_attempt_at` | DB-driven `next_attempt_at` with a scheduler loop, since state is already in Postgres and per-message TTL on the main queue is what caused BAR-007. |
 | 4 | Where templating lives | niosys renders; gateway renders (sandboxed Jinja2); provider-side templates | niosys renders by default. Revisit if other callers need server-side rendering. |
 | 5 | Attachment handling | inline base64; claim-check in object storage with AV; provider-hosted | claim-check with AV scan; inline only below a small threshold. |
 | 6 | Service authn | shared Basic; per-tenant API keys; OAuth2/JWT; mTLS | JWT (client credentials) as primary, API keys for external callers, mTLS optional at the mesh. Remove Basic. |
 | 7 | Webhook receiver placement | in the API app; separate deployable | separate deployable, with its own credentials and no path to the send side. |
 | 8 | Outbound state delivery | broker topic only; REST callbacks; both | broker topic as the primary, optional signed callback per tenant, `GET` as the fallback. All carry the same `EmailStateChanged` envelope. |
-| 9 | Unknown-outcome policy | always hold; always resend; per-message choice | per-message choice, default `hold`, with tenant defaults. |
+| 9 | Unknown-outcome policy | always hold; always resend; per-message choice | per-message choice, default `resend` after the reconcile deadline, capped and counted (decision D6), with tenant defaults. |
 | 10 | Python and framework baseline | 3.10; 3.12; 3.13 | 3.12 (LTS-like support window, wheels available), tested also on 3.13. |
 
 ## 11. Migration path from today's code
@@ -256,7 +257,7 @@ Each step is shippable and leaves the existing REST route working.
 1. **Hotfix pass (no design change):** BAR-001/002 config and credentials, BAR-009..013 SMTP, BAR-019/020 logging and lifecycle, BAR-033/034/035 container, CI and lock. Replace the queue TTL with a versioned queue (BAR-007) using the migration steps already described in README.
 2. **Contract and state:** add Postgres and Alembic, `messages`/`events`/`outbox`. Put the new `POST /v1/messages` beside the old route. Mint `message_id`, require `Idempotency-Key` on the new route, return 503 on dependency failure, and keep Celery behind the outbox relay so workers change little. Publish `EmailStateChanged` from the worker transitions.
 3. **Worker rewrite on the new core:** introduce `ProviderPort`, the registry, `MimeBuilder`, the attempt journal, the taxonomy, retry and DLQ replay. Move the existing adapters behind it. Delete `mail_error_task`, `mail_analytics_task`, the stubs and the Mailchimp adapter (or port it properly).
-4. **Native transports:** add the AMQP intake consumer and the gRPC edge on the same application service. Retire the Celery message as a public contract (ADR-1).
+4. **Native transports:** add the broker intake consumer (Kafka first, behind the broker port) and the gRPC edge on the same application service. Retire the Celery message as a public contract (ADR-1).
 5. **Feedback loop:** webhook receiver, suppressions, unsubscribe headers, attachment service.
 6. **Tenancy and reputation:** JWT/API-key authn, sender verification, per-tenant limits, warm-up, complaint circuit breaker.
 7. **Retire:** `sendmail` legacy route after callers (niosys, and niosys-v2 if it ever calls this service) have moved. Remove Basic auth.

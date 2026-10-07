@@ -12,7 +12,7 @@ A small FastAPI service with one business endpoint, `POST /api/v1/baruapepe/send
 
 | Concern | Choice | Source |
 |---|---|---|
-| Language | Python 3.10 (`.python-version`, Pipfile `python_version = "3.10"`, Docker `python:3.10.5-slim`). 3.10 reaches EOL on 2026-10-31. | `Pipfile:37`, `Dockerfile:1` |
+| Language | Python 3.10 (`.python-version`, Pipfile `python_version = "3.10"`, Docker `python:3.10.5-slim`). 3.10 reached EOL on 2026-10-01. | `Pipfile:37`, `Dockerfile:1` |
 | Web | FastAPI 0.142.2, Starlette 1.7.0, uvicorn 0.54.0 (`gunicorn` is listed but unused) | `Pipfile.lock` |
 | Validation | Pydantic 2.13.5 using v1-style APIs (`validator`, `root_validator`, `.dict()`, `.parse_obj()`) | `app/domain/entities/*` |
 | Queue | Celery 5.6.3 in `default`; `develop` pins 5.3.4. RabbitMQ over AMQP. Redis is the result backend. | `app/worker/celery_app.py` |

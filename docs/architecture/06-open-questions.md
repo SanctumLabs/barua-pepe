@@ -24,7 +24,7 @@ Format: question, why it matters, options, recommended default. The five that bl
 ## Q-BAR-04 (BLOCKER): What persistence and broker may the platform standardise on?
 - **Why:** there is no database today. The state machine, idempotency, outbox and suppression (Phase 1) all need one. The broker choice decides the native transport (ADR-1).
 - **Options:** persistence: PostgreSQL, MySQL, DynamoDB. Broker: RabbitMQ (today), Kafka, SQS/SNS, NATS.
-- **Default:** PostgreSQL and RabbitMQ (already in use here), with the contract kept broker-neutral.
+- **Default:** **Kafka** as the broker (decision D5, 2026-10-07: Kafka is production and the first binding; RabbitMQ stays an optional binding) and PostgreSQL as provisional persistence (not yet confirmed), with the contract kept broker-neutral.
 
 ## Q-BAR-05 (BLOCKER): What is the tenancy and caller identity model?
 - **Why:** today one shared Basic credential exists (BAR-001, BAR-003). Rate limits, sender verification, suppression scope and billing need a tenant. niosys may be the only caller or one of many.
@@ -52,7 +52,7 @@ Format: question, why it matters, options, recommended default. The five that bl
 - **Default:** a broker topic as primary, `GET` always available, optional signed callback. At-least-once with `id` and `sequence` for dedupe.
 
 ## Q-BAR-10: Python and runtime baseline
-- **Why:** Python 3.10 reaches end of life on 2026-10-31 and the lock does not resolve (BAR-035).
+- **Why:** Python 3.10 reached end of life on 2026-10-01 (it no longer receives security fixes) and the lock does not resolve (BAR-035).
 - **Options:** 3.12, 3.13; keep Celery or replace it (ADR-1).
 - **Default:** 3.12 now, 3.13 in CI; Celery kept only until the native consumer lands.
 
