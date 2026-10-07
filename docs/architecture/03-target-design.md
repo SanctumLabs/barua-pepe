@@ -5,6 +5,7 @@
 > 2. **Broker (sections 1, 2, ADR-1):** Kafka is the production broker. barua-pepe moves from RabbitMQ/Celery to a **broker port with Kafka as the first binding**; RabbitMQ remains a configurable binding. Issue #878 rescoped. "PostgreSQL and RabbitMQ" in Q-BAR-04 becomes "PostgreSQL and Kafka".
 > 3. **BAR-001:** default credentials are dev/test only; severity P1 (#865).
 > 4. **Deployability:** whether the self-contained-unit principle applies here is open (Q-PLAT-19).
+> 5. **Optional validity bound (proposed, not final):** no new attempt after `expires_at`; resend-after-unknown only within validity; `expired` is terminal and alerted (comment on #881). This is also the intended meaning of the 5 s queue TTL if it was meant to drop stale mail (#866).
 
 # barua-pepe: target design
 
