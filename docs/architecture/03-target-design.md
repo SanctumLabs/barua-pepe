@@ -1,5 +1,5 @@
 > **Status: Proposed. Discovery output dated 2026-10-07; not accepted architecture.** Describes the code as inspected on that date and a proposal for its replacement. Decisions are tracked in the ADR index and open-question log.
-
+>
 > **Superseded or added points (maintainer decisions, 2026-10-07; see niosys `docs/platform/18-decision-log.md`).**
 > 1. **Unknown outcome (sections 3.1 `on_unknown_outcome`, 5.3, ADR on unknown outcome):** "never auto-resends, hold" was replaced in the body below as well (section 5.3, the state model, the `SendEmail` example and ADR 9). A missed message is worse than a duplicate: reconcile by lookup; if nothing can be confirmed by the deadline, **resend, capped and counted**. `on_unknown_outcome` defaults to `resend`. Issue #881 amended.
 > 2. **Broker (sections 1, 2, ADR-1):** Kafka is the production broker. barua-pepe moves from RabbitMQ/Celery to a **broker port with Kafka as the first binding**; RabbitMQ remains a configurable binding; the AMQP, exchange, `x-death` and KEDA-on-RabbitMQ mechanics in the body are now described as the optional binding, with Kafka equivalents first. Issue #878 rescoped. "PostgreSQL and RabbitMQ" in Q-BAR-04 becomes "PostgreSQL and Kafka".

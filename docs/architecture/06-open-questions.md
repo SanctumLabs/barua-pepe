@@ -1,5 +1,5 @@
 > **Status: Proposed. Discovery output dated 2026-10-07; not accepted architecture.** Describes the code as inspected on that date and a proposal for its replacement. Decisions are tracked in the ADR index and open-question log.
-
+>
 > **Answered on 2026-10-07:** Q-BAR-01 barua-pepe is **not** running on default credentials (they are for local development and tests only); whether it carries real traffic is still unanswered. Q-BAR-04 the broker is Kafka (services stay broker-pluggable); persistence default PostgreSQL still unconfirmed. Q-BAR-02, 03, 05 to 14 remain open.
 
 # barua-pepe: open questions (humans only)
