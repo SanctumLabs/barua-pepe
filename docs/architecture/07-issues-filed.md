@@ -54,4 +54,7 @@ Children are attached to their epic as sub-issues. Labels per the brief: one `se
 | 894 | https://github.com/SanctumLabs/barua-pepe/issues/894 | Migrate Pydantic v1-style APIs and FastAPI startup hooks to current idioms | P3 | 864 | BAR-036 |
 | 895 | https://github.com/SanctumLabs/barua-pepe/issues/895 | Fix documentation drift and remove stray files; add a LICENSE and an architecture and operations guide | P3 | 864 | BAR-038 |
 
-Total: 38 issues (7 epics, 31 children). A stray tool call with a mistyped owner was rejected by the access check and created nothing.
+| 897 | https://github.com/SanctumLabs/barua-pepe/issues/897 | Package barua-pepe as a self-contained, configuration-driven deployable unit | P2 | 863 | (D19) |
+| 898 | https://github.com/SanctumLabs/barua-pepe/issues/898 | Provide GitLab CI and Bitbucket Pipelines for the mirrored repository from the same task entry points as GitHub Actions | P2 | 858 | (D16) |
+
+Total: 40 issues (7 epics, 33 children). A stray tool call with a mistyped owner was rejected by the access check and created nothing.
